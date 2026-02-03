@@ -774,11 +774,11 @@ function expectedRackWinRate(myR, oppR, D = 200) {
 }
 
 function tierFromRating(r) {
-  if (r >= 1300) return "钻石";
-  if (r >= 1200) return "铂金";
-  if (r >= 1100) return "黄金";
-  if (r >= 1000) return "白银";
-  if (r >= 900) return "青铜";
+  if (r >= 1300) return "一段";
+  if (r >= 1200) return "二段";
+  if (r >= 1100) return "三段";
+  if (r >= 1000) return "四段";
+  if (r >= 900) return "匕首";
   return "新手";
 }
 
