@@ -22,6 +22,9 @@ export default function Navbar() {
           <NavLink to="/new" className={linkClass}>
             新建比赛
           </NavLink>
+          <NavLink to="/leaderboard" className={linkClass}>
+            球员积分榜
+          </NavLink>
         </div>
       </div>
     </div>

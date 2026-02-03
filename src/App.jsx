@@ -7,6 +7,7 @@ import MatchesPage from "./pages/MatchesPage.jsx";
 import PlayersPage from "./pages/PlayersPage.jsx";
 import PlayerDetailPage from "./pages/PlayerDetailPage.jsx";
 import NewMatchPage from "./pages/NewMatchPage.jsx";
+import LeaderboardPage from "./pages/LeaderboardPage.jsx";
 
 export default function App() {
   return (
@@ -19,7 +20,9 @@ export default function App() {
           <Route path="/players" element={<PlayersPage />} />
           <Route path="/players/:playerId" element={<PlayerDetailPage />} />
           <Route path="/new" element={<NewMatchPage />} />
+          <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="*" element={<Navigate to="/matches" replace />} />
+          
         </Routes>
       </PageShell>
     </div>

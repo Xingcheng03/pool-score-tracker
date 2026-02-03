@@ -615,3 +615,221 @@ export function calcPlayerStats(playerId, opts = {}) {
     matches,
   };
 }
+
+export function buildFargoLiteLeaderboard(opts = {}) {
+  const mode = normalizeMode(opts.mode ?? "all"); // all | practice | live
+  const q = String(opts.q ?? "").trim().toLowerCase();
+  const minMatches = Number(opts.minMatches ?? 0);
+
+  const sortKey = opts.sortKey ?? "rating";     // rating | rackWinRate | trend10 | matches
+  const sortDir = opts.sortDir ?? "desc";       // asc | desc
+
+  const players = getPlayers();
+  const matchesAll = getMatches("all");
+  const matches = mode === "all" ? matchesAll : matchesAll.filter((m) => m.tag === mode);
+
+  const { rating, played } = computeRatingsFargoLiteHalf(players, matches);
+
+  let rows = players.map((p) => {
+    const r = rating.get(p.id) ?? 1000;
+    const stats = calcRackStatsForPlayerHalf(p.id, matchesAll, "all"); // 展示层用全量更直观（你也可以改成 mode）
+    return {
+      id: p.id,
+      name: p.name ?? "Unknown",
+      rating: r,
+      tier: tierFromRating(r),
+      played: played.get(p.id) ?? 0,           // 真实参与场次（用于“更稳定”）
+      effMatches: stats.effMatches,            // 折算场次（用于可信度展示）
+      racks: stats.racks,
+      rackWinRate: stats.rackWinRate,
+      liveRackWinRate: stats.liveRackWinRate,
+      pracRackWinRate: stats.pracRackWinRate,
+      trend10: stats.trend10,
+      confidence: stats.confidence,
+    };
+  });
+
+  // 过滤
+  rows = rows
+    .filter((x) => (q ? x.name.toLowerCase().includes(q) : true))
+    .filter((x) => x.effMatches >= minMatches);
+
+  // 排序
+  const dir = sortDir === "asc" ? 1 : -1;
+  rows.sort((a, b) => {
+    const va =
+      sortKey === "rating" ? a.rating :
+      sortKey === "rackWinRate" ? a.rackWinRate :
+      sortKey === "trend10" ? a.trend10 :
+      a.effMatches;
+
+    const vb =
+      sortKey === "rating" ? b.rating :
+      sortKey === "rackWinRate" ? b.rackWinRate :
+      sortKey === "trend10" ? b.trend10 :
+      b.effMatches;
+
+    return (va - vb) * dir;
+  });
+
+  return rows;
+}
+
+
+function handicapHalfFactor(match, playerId) {
+  // 只有“被放门方赢”才折算半场
+  if (!match?.isHandicap) return 1;
+  if (!match?.winnerId) return 1;
+
+  const giverId = match.handicapGiverId;
+  const receiverId = match.handicapReceiverId;
+  if (!giverId || !receiverId) return 1;
+
+  const receiverWon = match.winnerId === receiverId;
+  if (!receiverWon) return 1;
+
+  // 这场对双方都只算“半场”
+  if (playerId === giverId || playerId === receiverId) return 0.5;
+  return 1;
+}
+
+function normalizeMode(mode) {
+  return mode === "live" ? "live" : mode === "practice" ? "practice" : "all";
+}
+
+function clamp(n, a, b) {
+  return Math.max(a, Math.min(b, n));
+}
+
+function calcRackStatsForPlayerHalf(playerId, matchesAll, mode) {
+  const m = normalizeMode(mode);
+  const filtered = m === "all" ? matchesAll : matchesAll.filter((x) => x.tag === m);
+
+  let effMatches = 0;   // 折算后的“总场”
+  let effWins = 0;      // 折算后的“胜场”（用于可信度展示可选）
+  let racks = 0;
+  let won = 0;
+
+  let liveRacks = 0, liveWon = 0;
+  let pracRacks = 0, pracWon = 0;
+
+  const recent = [];
+
+  for (const match of filtered) {
+    const isLeft = match.leftPlayerId === playerId;
+    const isRight = match.rightPlayerId === playerId;
+    if (!isLeft && !isRight) continue;
+
+    const my = isLeft ? Number(match.leftScore ?? 0) : Number(match.rightScore ?? 0);
+    const opp = isLeft ? Number(match.rightScore ?? 0) : Number(match.leftScore ?? 0);
+    const total = my + opp;
+    if (total <= 0) continue;
+
+    const f = handicapHalfFactor(match, playerId); // 1 或 0.5
+
+    // “局”层面也按半场权重计入（使局胜率和你旧胜率规则一致）
+    racks += total * f;
+    won += my * f;
+
+    // 可选：把“可信度”也用折算后的场次（更贴合你半场逻辑）
+    effMatches += f;
+
+    // 统计胜负（折算后只用于 confidence 展示，你也可以不用）
+    if (match.winnerId) {
+      if (match.winnerId === playerId) effWins += f;
+    }
+
+    if (match.tag === "live") { liveRacks += total * f; liveWon += my * f; }
+    else { pracRacks += total * f; pracWon += my * f; }
+
+    const t = new Date(match.dateISO).getTime();
+    recent.push({ t, diff: clamp((my - opp) * 2, -20, 20) * f });
+  }
+
+  recent.sort((a, b) => b.t - a.t);
+  const trend10 = recent.slice(0, 10).reduce((s, x) => s + x.diff, 0);
+
+  const rackWinRate = racks ? won / racks : 0;
+  const liveRackWinRate = liveRacks ? liveWon / liveRacks : 0;
+  const pracRackWinRate = pracRacks ? pracWon / pracRacks : 0;
+
+  // 可信度用“折算后的场次”更合理（半场不如整场可靠）
+  let confidence = "低";
+  if (effMatches >= 30) confidence = "高";
+  else if (effMatches >= 10) confidence = "中";
+
+  return {
+    effMatches,      // 折算场次（用于可信度显示）
+    racks,           // 折算局数
+    rackWinRate,
+    liveRackWinRate,
+    pracRackWinRate,
+    trend10,
+    confidence,
+  };
+}
+
+function expectedRackWinRate(myR, oppR, D = 200) {
+  return 1 / (1 + Math.pow(10, (oppR - myR) / D));
+}
+
+function tierFromRating(r) {
+  if (r >= 1300) return "钻石";
+  if (r >= 1200) return "铂金";
+  if (r >= 1100) return "黄金";
+  if (r >= 1000) return "白银";
+  if (r >= 900) return "青铜";
+  return "新手";
+}
+
+function computeRatingsFargoLiteHalf(players, matches) {
+  const rating = new Map(players.map((p) => [p.id, 1000]));
+  const played = new Map(players.map((p) => [p.id, 0])); // 真实参与场次（不折算），用于稳健
+
+  const sorted = [...matches].sort((a, b) => new Date(a.dateISO).getTime() - new Date(b.dateISO).getTime());
+
+  const K = 40;
+  const D = 200;
+
+  for (const m of sorted) {
+    const A = m.leftPlayerId;
+    const B = m.rightPlayerId;
+    if (!A || !B) continue;
+
+    const aScore = Number(m.leftScore ?? 0);
+    const bScore = Number(m.rightScore ?? 0);
+    const totalRacks = aScore + bScore;
+    if (totalRacks <= 0) continue;
+
+    const Ra = rating.get(A) ?? 1000;
+    const Rb = rating.get(B) ?? 1000;
+
+    const expectedA = expectedRackWinRate(Ra, Rb, D);
+    const actualA = aScore / totalRacks;
+
+    const tag = m.tag === "live" ? "live" : "practice";
+    const weight = tag === "live" ? 1.0 : 0.7;
+
+    const pa = played.get(A) ?? 0;
+    const pb = played.get(B) ?? 0;
+    const robustA = 1 / Math.sqrt(1 + pa / 10);
+    const robustB = 1 / Math.sqrt(1 + pb / 10);
+
+    // ✅ 放门半场：如果 receiverWon，则这场对双方更新“只算半场”
+    let handicapFactor = 1.0;
+    if (m.isHandicap && m.handicapReceiverId && m.winnerId) {
+      const receiverWon = m.winnerId === m.handicapReceiverId;
+      if (receiverWon) handicapFactor = 0.5;  // <-- 你要的 0.5 口径
+    }
+
+    const delta = K * (actualA - expectedA) * weight * handicapFactor;
+
+    rating.set(A, Ra + delta * robustA);
+    rating.set(B, Rb - delta * robustB);
+
+    played.set(A, pa + 1);
+    played.set(B, pb + 1);
+  }
+
+  return { rating, played };
+}
