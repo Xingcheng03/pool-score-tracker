@@ -1,6 +1,6 @@
 // src/pages/LeaderboardPage.jsx
 import React, { useMemo, useState } from "react";
-import { buildFargoLiteLeaderboard, tagLabel } from "../data/store.js";
+import { buildFargoLiteLeaderboard, tagLabel, exportLeaderboardToJSON, exportLeaderboardToExcel } from "../data/store.js";
 
 export default function LeaderboardPage() {
   const [q, setQ] = useState("");
@@ -71,9 +71,30 @@ export default function LeaderboardPage() {
             <option value={30}>至少 30 场</option>
           </select>
 
-          <div style={{ display: "flex", alignItems: "center", color: "var(--muted)", fontSize: 13 }}>
-            说明：排名按 Rating 默认降序
-          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+            <div style={{ color: "var(--muted)", fontSize: 13 }}>
+                说明：排名按 Rating 默认降序
+            </div>
+
+            <div className="row" style={{ gap: 8, justifyContent: "flex-end" }}>
+                {/* <button
+                className="btn"
+                type="button"
+                onClick={() => exportLeaderboardToJSON({ mode, q, minMatches, sortKey, sortDir })}
+                >
+                导出积分榜 JSON
+                </button> */}
+
+                <button
+                className="btn"
+                type="button"
+                onClick={() => exportLeaderboardToExcel({ mode, q, minMatches, sortKey, sortDir })}
+                >
+                导出积分榜 Excel
+                </button>
+            </div>
+            </div>
+
         </div>
       </div>
 

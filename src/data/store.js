@@ -438,6 +438,224 @@ export async function exportToExcel() {
   }
 }
 
+// ===== Leaderboard 导出（JSON / Excel）=====
+
+function safeFilenamePart(s) {
+  return String(s ?? "")
+    .replace(/[\\/:*?"<>|]+/g, "_")
+    .trim()
+    .slice(0, 40);
+}
+
+function nowStamp() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
+}
+
+function pctToNumber(x) {
+  const n = Number(x);
+  return Number.isFinite(n) ? n : 0;
+}
+
+// 你页面里的可选：rating | rackWinRate | trend10 | matches
+// store 内部实现用 effMatches，所以这里帮你统一
+function normalizeLeaderboardSortKey(k) {
+  if (k === "matches") return "matches"; // buildFargoLiteLeaderboard 里你已经用 effMatches 去排序
+  if (k === "rackWinRate") return "rackWinRate";
+  if (k === "trend10") return "trend10";
+  return "rating";
+}
+
+/**
+ * 导出积分榜 JSON（只导出“当前筛选条件下”的榜单结果）
+ * opts: { mode, q, minMatches, sortKey, sortDir }
+ */
+export function exportLeaderboardToJSON(opts = {}) {
+  const mode = normalizeMode(opts.mode ?? "all");
+  const q = String(opts.q ?? "").trim();
+  const minMatches = Number(opts.minMatches ?? 0);
+  const sortKey = normalizeLeaderboardSortKey(opts.sortKey ?? "rating");
+  const sortDir = opts.sortDir === "asc" ? "asc" : "desc";
+
+  const rows = buildFargoLiteLeaderboard({ mode, q, minMatches, sortKey, sortDir });
+
+  const payload = {
+    exportedAtISO: new Date().toISOString(),
+    type: "leaderboard",
+    filters: { mode, q, minMatches, sortKey, sortDir },
+    // 只保留展示需要的字段（更干净）
+    rows: rows.map((r, idx) => ({
+      rank: idx + 1,
+      id: r.id,
+      name: r.name,
+      rating: Math.round(r.rating),
+      tier: r.tier,
+      confidence: r.confidence,
+      // 可信度展示用折算场次 + 折算局数（和你 Leaderboard UI 口径一致）
+      effMatches: r.effMatches,
+      racks: r.racks,
+      rackWinRate: r.rackWinRate,
+      liveRackWinRate: r.liveRackWinRate,
+      pracRackWinRate: r.pracRackWinRate,
+      trend10: r.trend10,
+      // 真实参与场次（用于稳健系数，不一定展示，但导出带上也有价值）
+      played: r.played,
+    })),
+    // 可选：把你“0.5 放门规则”的说明也塞进去，方便别人看 JSON 就懂
+    notes: {
+      handicapRule:
+        "若 isHandicap=true 且 handicapReceiverId 获胜，则该场按 0.5 场折算（用于局数统计与 Rating 更新）；否则按 1.0 场。",
+      ratingRule:
+        "Rating 约等于 K*(actualRackWR-expectedRackWR)*tagWeight*handicapFactor*robustness，其中练习赛权重0.7，直播权重1.0。",
+    },
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+
+  const fname = `leaderboard-${safeFilenamePart(mode)}-${nowStamp()}.json`;
+  a.href = url;
+  a.download = fname;
+
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * 导出积分榜 Excel（只导出“当前筛选条件下”的榜单结果）
+ * opts: { mode, q, minMatches, sortKey, sortDir }
+ */
+export async function exportLeaderboardToExcel(opts = {}) {
+  const mode = normalizeMode(opts.mode ?? "all");
+  const q = String(opts.q ?? "").trim();
+  const minMatches = Number(opts.minMatches ?? 0);
+  const sortKey = normalizeLeaderboardSortKey(opts.sortKey ?? "rating");
+  const sortDir = opts.sortDir === "asc" ? "asc" : "desc";
+
+  const rows = buildFargoLiteLeaderboard({ mode, q, minMatches, sortKey, sortDir });
+
+  const wb = new ExcelJS.Workbook();
+  wb.creator = "Pool Match Tracker";
+  wb.created = new Date();
+
+  const ws = wb.addWorksheet("积分榜", { views: [{ state: "frozen", ySplit: 2 }] });
+
+  // 标题行
+  const title = `积分榜导出（mode=${mode}，minMatches=${minMatches}，sort=${sortKey}-${sortDir}${q ? `，q=${q}` : ""}）`;
+  addTitleRow(ws, title);
+
+  // 表头
+  const header = ws.addRow([
+    "排名",
+    "球员",
+    "Rating",
+    "段位",
+    "可信度",
+    "折算场次",
+    "折算局数",
+    "局胜率",
+    "直播局胜率",
+    "练习局胜率",
+    "最近10场",
+    "真实场次(稳健)",
+  ]);
+  styleHeaderRow(header);
+
+  // 列宽
+  ws.columns = [
+    { width: 8 },   // 排名
+    { width: 18 },  // 球员
+    { width: 10 },  // Rating
+    { width: 10 },  // 段位
+    { width: 12 },  // 可信度
+    { width: 12 },  // 折算场次
+    { width: 12 },  // 折算局数
+    { width: 12 },  // 局胜率
+    { width: 14 },  // 直播局胜率
+    { width: 14 },  // 练习局胜率
+    { width: 12 },  // 最近10场
+    { width: 14 },  // 真实场次
+  ];
+
+  // 数据行
+  rows.forEach((r, idx) => {
+    ws.addRow([
+      idx + 1,
+      r.name,
+      Math.round(r.rating),
+      r.tier,
+      r.confidence,
+      pctToNumber(r.effMatches),
+      pctToNumber(r.racks),
+      pctToNumber(r.rackWinRate),
+      pctToNumber(r.liveRackWinRate),
+      pctToNumber(r.pracRackWinRate),
+      pctToNumber(r.trend10),
+      pctToNumber(r.played),
+    ]);
+  });
+
+  // 百分比格式：局胜率相关列
+  // 表头是第 (ws.rowCount - rows.length) 行之后，最简单：从第 4 行开始（因为 addTitleRow 会插一空行）
+  // 你的 addTitleRow: 标题行 + 空行，因此 header 在第 3 行，数据从第 4 行开始
+  const dataStart = 4;
+  const dataEnd = ws.rowCount;
+
+  // “局胜率/直播/练习”三列：8,9,10
+  setNumFmtRange(ws, 8, dataStart, dataEnd, "0.0%");
+  setNumFmtRange(ws, 9, dataStart, dataEnd, "0.0%");
+  setNumFmtRange(ws, 10, dataStart, dataEnd, "0.0%");
+
+  // 自动筛选（覆盖表头到最后一行）
+  ws.autoFilter = { from: { row: 3, column: 1 }, to: { row: dataEnd, column: 12 } };
+
+  // 备注 sheet：把规则说明写进去（你说要给别人展示完整步骤，这个很加分）
+  const note = wb.addWorksheet("计分规则");
+  note.columns = [{ width: 120 }];
+  addTitleRow(note, "积分计算规则（Fargo-lite + 放门半场）");
+
+  note.addRow([
+    "1) Rating 初始值：每位球员初始 Rating = 1000。",
+  ]);
+  note.addRow([
+    "2) 按时间顺序逐场迭代：越早的比赛先计算，用当前双方 Rating 估计预期局胜率。",
+  ]);
+  note.addRow([
+    "3) 实际局胜率 Actual = 本场赢局数 / 本场总局数。",
+  ]);
+  note.addRow([
+    "4) 预期局胜率 Expected = 1 / (1 + 10^((对手Rating-我Rating)/D))，D=200。",
+  ]);
+  note.addRow([
+    "5) 标签权重：直播 weight=1.0，练习 weight=0.7。",
+  ]);
+  note.addRow([
+    "6) 稳健系数：robust = 1 / sqrt(1 + 场次/10)，场次越多单场波动越小。",
+  ]);
+  note.addRow([
+    "7) 放门半场折算：若 isHandicap=true 且 被放门方(handicapReceiverId) 获胜，则 handicapFactor=0.5；否则为 1.0。",
+  ]);
+  note.addRow([
+    "8) 单场 Rating 更新（A 为 left，B 为 right）：delta = K*(ActualA-ExpectedA)*weight*handicapFactor；A += delta*robustA，B -= delta*robustB。K=40。",
+  ]);
+  note.addRow([
+    "9) 积分榜局胜率统计：局数与赢局数也按 handicapFactor 折算，确保与 0.5 规则一致。",
+  ]);
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+
+  const fname = `leaderboard-${safeFilenamePart(mode)}-${nowStamp()}.xlsx`;
+  saveAs(blob, fname);
+}
+
+
 export function getPlayers() {
   return loadAll().players;
 }
