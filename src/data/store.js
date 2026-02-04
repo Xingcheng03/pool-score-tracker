@@ -1004,8 +1004,9 @@ function tierFromRating(r) {
   if (r >= 495) return "斗灵";
   if (r >= 490) return "大斗师";
   if (r >= 485) return "斗师";
-  if (r >= 485) return "斗者";
-  return "匕首";
+  if (r >= 480) return "斗者";
+  if (r >= 475) return "匕首";
+  return "大匕首";
 }
 
 function computeRatingsFargoLiteHalf(players, matches) {
