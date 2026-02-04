@@ -110,7 +110,7 @@ export default function LeaderboardPage() {
                 ["段位", null],
                 ["可信度", "matches"],
                 ["局胜率", "rackWinRate"],
-                ["最近10场", "trend10"],
+                ["最近10场趋势", "trend10"],
                 ["直播局胜率", null],
                 ["练习局胜率", null],
               ].map(([label, key]) => (
@@ -181,7 +181,7 @@ export default function LeaderboardPage() {
 
         <div style={{ marginBottom: 8 }}>
             <b>1. 基本思想</b><br />
-            每位球员都有一个初始 Rating（1000）。系统按比赛时间顺序，逐场比较
+            每位球员都有一个初始 Rating（500）。系统按比赛时间顺序，逐场比较
             「<b>实际局胜率</b>」与「<b>基于对手强度的预期局胜率</b>」，根据差异对
             Rating 进行增减。
         </div>
