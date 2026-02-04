@@ -995,17 +995,121 @@ function expectedRackWinRate(myR, oppR, D = 200) {
 }
 
 function tierFromRating(r) {
-  if (r >= 525) return "斗帝";
-  if (r >= 520) return "斗圣";
-  if (r >= 515) return "斗尊";
-  if (r >= 510) return "斗宗";
-  if (r >= 505) return "斗皇";
-  if (r >= 500) return "斗王";
-  if (r >= 495) return "斗灵";
-  if (r >= 490) return "大斗师";
-  if (r >= 485) return "斗师";
-  if (r >= 480) return "斗者";
-  if (r >= 475) return "匕首";
+  const n = Math.floor(Number(r) || 0);
+
+  // ===== 斗帝（顶级不分星）=====
+  if (n >= 550) return "斗帝";
+
+  // ===== 斗圣 =====
+  if (n >= 549) return "九星斗圣";
+  if (n >= 548) return "八星斗圣";
+  if (n >= 547) return "七星斗圣";
+  if (n >= 546) return "六星斗圣";
+  if (n >= 545) return "五星斗圣";
+  if (n >= 544) return "四星斗圣";
+  if (n >= 543) return "三星斗圣";
+  if (n >= 542) return "二星斗圣";
+  if (n >= 540) return "一星斗圣";
+
+  // ===== 斗尊 =====
+  if (n >= 539) return "九星斗尊";
+  if (n >= 538) return "八星斗尊";
+  if (n >= 537) return "七星斗尊";
+  if (n >= 536) return "六星斗尊";
+  if (n >= 535) return "五星斗尊";
+  if (n >= 534) return "四星斗尊";
+  if (n >= 533) return "三星斗尊";
+  if (n >= 532) return "二星斗尊";
+  if (n >= 530) return "一星斗尊";
+
+  // ===== 斗宗 =====
+  if (n >= 529) return "九星斗宗";
+  if (n >= 528) return "八星斗宗";
+  if (n >= 527) return "七星斗宗";
+  if (n >= 526) return "六星斗宗";
+  if (n >= 525) return "五星斗宗";
+  if (n >= 524) return "四星斗宗";
+  if (n >= 523) return "三星斗宗";
+  if (n >= 522) return "二星斗宗";
+  if (n >= 520) return "一星斗宗";
+
+  // ===== 斗皇 =====
+  if (n >= 519) return "九星斗皇";
+  if (n >= 518) return "八星斗皇";
+  if (n >= 517) return "七星斗皇";
+  if (n >= 516) return "六星斗皇";
+  if (n >= 515) return "五星斗皇";
+  if (n >= 514) return "四星斗皇";
+  if (n >= 513) return "三星斗皇";
+  if (n >= 512) return "二星斗皇";
+  if (n >= 510) return "一星斗皇";
+
+  // ===== 斗王 =====
+  if (n >= 509) return "九星斗王";
+  if (n >= 508) return "八星斗王";
+  if (n >= 507) return "七星斗王";
+  if (n >= 506) return "六星斗王";
+  if (n >= 505) return "五星斗王";
+  if (n >= 504) return "四星斗王";
+  if (n >= 503) return "三星斗王";
+  if (n >= 502) return "二星斗王";
+  if (n >= 500) return "一星斗王";
+
+  // ===== 斗灵 =====
+  if (n >= 499) return "九星斗灵";
+  if (n >= 498) return "八星斗灵";
+  if (n >= 497) return "七星斗灵";
+  if (n >= 496) return "六星斗灵";
+  if (n >= 495) return "五星斗灵";
+  if (n >= 494) return "四星斗灵";
+  if (n >= 493) return "三星斗灵";
+  if (n >= 492) return "二星斗灵";
+  if (n >= 490) return "一星斗灵";
+
+  // ===== 大斗师 =====
+  if (n >= 489) return "九星大斗师";
+  if (n >= 488) return "八星大斗师";
+  if (n >= 487) return "七星大斗师";
+  if (n >= 486) return "六星大斗师";
+  if (n >= 485) return "五星大斗师";
+  if (n >= 484) return "四星大斗师";
+  if (n >= 483) return "三星大斗师";
+  if (n >= 482) return "二星大斗师";
+  if (n >= 480) return "一星大斗师";
+
+  // ===== 斗师 =====
+  if (n >= 479) return "九星斗师";
+  if (n >= 478) return "八星斗师";
+  if (n >= 477) return "七星斗师";
+  if (n >= 476) return "六星斗师";
+  if (n >= 475) return "五星斗师";
+  if (n >= 474) return "四星斗师";
+  if (n >= 473) return "三星斗师";
+  if (n >= 472) return "二星斗师";
+  if (n >= 470) return "一星斗师";
+
+  // ===== 斗者 =====
+  if (n >= 469) return "九星斗者";
+  if (n >= 468) return "八星斗者";
+  if (n >= 467) return "七星斗者";
+  if (n >= 466) return "六星斗者";
+  if (n >= 465) return "五星斗者";
+  if (n >= 464) return "四星斗者";
+  if (n >= 463) return "三星斗者";
+  if (n >= 462) return "二星斗者";
+  if (n >= 460) return "一星斗者";
+
+  // ===== 匕首 =====
+  if (n >= 459) return "一星匕首";
+  if (n >= 458) return "二星匕首";
+  if (n >= 457) return "三星匕首";
+  if (n >= 456) return "四星匕首";
+  if (n >= 455) return "五星匕首";
+  if (n >= 454) return "六星匕首";
+  if (n >= 453) return "七星匕首";
+  if (n >= 452) return "八星匕首";
+  if (n >= 450) return "九星匕首";
+
   return "大匕首";
 }
 
