@@ -849,7 +849,7 @@ export function buildFargoLiteLeaderboard(opts = {}) {
   const { rating, played } = computeRatingsFargoLiteHalf(players, matches);
 
   let rows = players.map((p) => {
-    const raw = rating.get(p.id) ?? 1000;
+    const raw = rating.get(p.id) ?? 500;
     const rounded = Math.round(raw);
 
     const stats = calcRackStatsForPlayerHalf(p.id, matchesAll, "all");
@@ -995,16 +995,16 @@ function expectedRackWinRate(myR, oppR, D = 200) {
 }
 
 function tierFromRating(r) {
-  if (r >= 1300) return "一段";
-  if (r >= 1200) return "二段";
-  if (r >= 1100) return "三段";
-  if (r >= 1000) return "四段";
-  if (r >= 900) return "匕首";
-  return "新手";
+  if (r >= 590) return "一段";
+  if (r >= 560) return "二段";
+  if (r >= 530) return "三段";
+  if (r >= 500) return "四段";
+  if (r >= 470) return "匕首";
+  return "匕首中的匕首";
 }
 
 function computeRatingsFargoLiteHalf(players, matches) {
-  const rating = new Map(players.map((p) => [p.id, 1000]));
+  const rating = new Map(players.map((p) => [p.id, 500]));
   const played = new Map(players.map((p) => [p.id, 0])); // 真实参与场次（不折算），用于稳健
 
   const sorted = [...matches].sort((a, b) => new Date(a.dateISO).getTime() - new Date(b.dateISO).getTime());
