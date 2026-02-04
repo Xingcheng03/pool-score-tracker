@@ -995,11 +995,16 @@ function expectedRackWinRate(myR, oppR, D = 200) {
 }
 
 function tierFromRating(r) {
-  if (r >= 560) return "一段";
-  if (r >= 530) return "二段";
-  if (r >= 500) return "三段";
-  if (r >= 470) return "匕首";
-  return "匕首中的匕首";
+  if (r >= 525) return "一段";
+  if (r >= 520) return "二段";
+  if (r >= 515) return "三段";
+  if (r >= 510) return "四段";
+  if (r >= 505) return "五段";
+  if (r >= 500) return "六段";
+  if (r >= 495) return "七段";
+  if (r >= 490) return "八段";
+  if (r >= 485) return "九段";
+  return "匕首";
 }
 
 function computeRatingsFargoLiteHalf(players, matches) {
