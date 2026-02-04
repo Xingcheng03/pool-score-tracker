@@ -995,10 +995,9 @@ function expectedRackWinRate(myR, oppR, D = 200) {
 }
 
 function tierFromRating(r) {
-  if (r >= 590) return "一段";
-  if (r >= 560) return "二段";
-  if (r >= 530) return "三段";
-  if (r >= 500) return "四段";
+  if (r >= 560) return "一段";
+  if (r >= 530) return "二段";
+  if (r >= 500) return "三段";
   if (r >= 470) return "匕首";
   return "匕首中的匕首";
 }
