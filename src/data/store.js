@@ -849,15 +849,18 @@ export function buildFargoLiteLeaderboard(opts = {}) {
   const { rating, played } = computeRatingsFargoLiteHalf(players, matches);
 
   let rows = players.map((p) => {
-    const r = rating.get(p.id) ?? 1000;
-    const stats = calcRackStatsForPlayerHalf(p.id, matchesAll, "all"); // 展示层用全量更直观（你也可以改成 mode）
+    const raw = rating.get(p.id) ?? 1000;
+    const rounded = Math.round(raw);
+
+    const stats = calcRackStatsForPlayerHalf(p.id, matchesAll, "all");
     return {
       id: p.id,
       name: p.name ?? "Unknown",
-      rating: r,
-      tier: tierFromRating(r),
-      played: played.get(p.id) ?? 0,           // 真实参与场次（用于“更稳定”）
-      effMatches: stats.effMatches,            // 折算场次（用于可信度展示）
+      rating: raw,                 // 你想保留原始也行
+      ratingRounded: rounded,       // 展示用
+      tier: tierFromRating(rounded),// ✅ 段位用 rounded
+      played: played.get(p.id) ?? 0,
+      effMatches: stats.effMatches,
       racks: stats.racks,
       rackWinRate: stats.rackWinRate,
       liveRackWinRate: stats.liveRackWinRate,
