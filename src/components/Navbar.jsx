@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { NavLink } from "react-router-dom";
 
 export default function Navbar() {
@@ -23,7 +23,10 @@ export default function Navbar() {
             新建比赛
           </NavLink>
           <NavLink to="/leaderboard" className={linkClass}>
-            球员积分榜
+            Fargo 积分榜
+          </NavLink>
+          <NavLink to="/win-lose-points" className={linkClass}>
+            胜负积分榜
           </NavLink>
         </div>
       </div>
