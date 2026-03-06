@@ -14,9 +14,11 @@ function formatLocalDateTimeInput(d) {
   return `${formatYMD(d)}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
-function defaultMatchName(tag) {
-  const now = new Date();
-  return `${tag === "live" ? "直播" : "练习赛"} ${formatYMD(now)}`;
+function defaultMatchName(tag, leftName, rightName) {
+  const prefix = tag === "live" ? "直播" : "练习赛";
+  const left = (leftName ?? "").trim() || "左边球员";
+  const right = (rightName ?? "").trim() || "右边球员";
+  return `${prefix} ${left} VS ${right}`;
 }
 
 export default function NewMatchPage() {
@@ -25,6 +27,7 @@ export default function NewMatchPage() {
 
   const [tag, setTag] = useState("practice");
   const [matchName, setMatchName] = useState(() => defaultMatchName("practice"));
+  const [isMatchNameAuto, setIsMatchNameAuto] = useState(true);
   const [raceTo, setRaceTo] = useState(7);
 
   const [leftPlayerId, setLeftPlayerId] = useState("");
@@ -74,8 +77,25 @@ export default function NewMatchPage() {
 
   const onChangeTag = (v) => {
     setTag(v);
-    const prefixMatch = matchName.startsWith("练习赛") || matchName.startsWith("直播");
-    if (prefixMatch) setMatchName(defaultMatchName(v));
+    if (isMatchNameAuto) {
+      setMatchName(defaultMatchName(v, leftPlayer?.name, rightPlayer?.name));
+    }
+  };
+
+  const onChangeLeftPlayer = (playerId) => {
+    setLeftPlayerId(playerId);
+    if (isMatchNameAuto) {
+      const leftName = players.find((p) => p.id === playerId)?.name;
+      setMatchName(defaultMatchName(tag, leftName, rightPlayer?.name));
+    }
+  };
+
+  const onChangeRightPlayer = (playerId) => {
+    setRightPlayerId(playerId);
+    if (isMatchNameAuto) {
+      const rightName = players.find((p) => p.id === playerId)?.name;
+      setMatchName(defaultMatchName(tag, leftPlayer?.name, rightName));
+    }
   };
 
   const onSave = () => {
@@ -110,7 +130,15 @@ export default function NewMatchPage() {
         <div className="row" style={{ marginBottom: 12 }}>
           <div style={{ flex: 1, minWidth: 260 }}>
             <div className="smallMuted">比赛名称</div>
-            <input className="input" value={matchName} onChange={(e) => setMatchName(e.target.value)} placeholder="例如：周末友谊赛 / 决赛 BO13 / 训练记录" />
+            <input
+              className="input"
+              value={matchName}
+              onChange={(e) => {
+                setIsMatchNameAuto(false);
+                setMatchName(e.target.value);
+              }}
+              placeholder="例如：周末友谊赛 / 决赛 BO13 / 训练记录"
+            />
           </div>
         </div>
 
@@ -144,7 +172,7 @@ export default function NewMatchPage() {
         <div className="row" style={{ alignItems: "flex-end" }}>
           <div style={{ flex: 1, minWidth: 220 }}>
             <div className="smallMuted">左侧球员</div>
-            <select className="input" value={leftPlayerId} onChange={(e) => setLeftPlayerId(e.target.value)}>
+            <select className="input" value={leftPlayerId} onChange={(e) => onChangeLeftPlayer(e.target.value)}>
               <option value="">请选择</option>
               {players.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -174,7 +202,7 @@ export default function NewMatchPage() {
 
           <div style={{ flex: 1, minWidth: 220 }}>
             <div className="smallMuted">右侧球员</div>
-            <select className="input" value={rightPlayerId} onChange={(e) => setRightPlayerId(e.target.value)}>
+            <select className="input" value={rightPlayerId} onChange={(e) => onChangeRightPlayer(e.target.value)}>
               <option value="">请选择</option>
               {players.map((p) => (
                 <option key={p.id} value={p.id}>
