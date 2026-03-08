@@ -1165,29 +1165,32 @@ function computeRatingsFargoLiteHalf(players, matches) {
     }
 
     let matchupFactor = 1.0;
-    const rankedIds = [...playerIds].sort((id1, id2) => {
-      const r2 = rating.get(id2) ?? 500;
-      const r1 = rating.get(id1) ?? 500;
-      if (r2 !== r1) return r2 - r1;
-      return String(id1).localeCompare(String(id2));
-    });
-    const rankMap = new Map(rankedIds.map((id, idx) => [id, idx + 1]));
-    const rankA = rankMap.get(A) ?? 0;
-    const rankB = rankMap.get(B) ?? 0;
-    const rankDiff = Math.abs(rankA - rankB);
+    // Handicap matches skip strength-gap tiering because strength difference is already compensated.
+    if (!m.isHandicap) {
+      const rankedIds = [...playerIds].sort((id1, id2) => {
+        const r2 = rating.get(id2) ?? 500;
+        const r1 = rating.get(id1) ?? 500;
+        if (r2 !== r1) return r2 - r1;
+        return String(id1).localeCompare(String(id2));
+      });
+      const rankMap = new Map(rankedIds.map((id, idx) => [id, idx + 1]));
+      const rankA = rankMap.get(A) ?? 0;
+      const rankB = rankMap.get(B) ?? 0;
+      const rankDiff = Math.abs(rankA - rankB);
 
-    let tier = 0;
-    if (rankDiff >= RANK_TIER_3) tier = 3;
-    else if (rankDiff >= RANK_TIER_2) tier = 2;
-    else if (rankDiff >= RANK_TIER_1) tier = 1;
+      let tier = 0;
+      if (rankDiff >= RANK_TIER_3) tier = 3;
+      else if (rankDiff >= RANK_TIER_2) tier = 2;
+      else if (rankDiff >= RANK_TIER_1) tier = 1;
 
-    if (tier > 0 && rankA > 0 && rankB > 0 && rankA !== rankB) {
-      const aIsHigherRank = rankA < rankB;
-      const aWon = aScore > bScore;
-      const higherWon = (aIsHigherRank && aWon) || (!aIsHigherRank && !aWon);
-      matchupFactor = higherWon
-        ? EXPECTED_WIN_FACTOR_BY_TIER[tier]
-        : UPSET_WIN_FACTOR_BY_TIER[tier];
+      if (tier > 0 && rankA > 0 && rankB > 0 && rankA !== rankB) {
+        const aIsHigherRank = rankA < rankB;
+        const aWon = aScore > bScore;
+        const higherWon = (aIsHigherRank && aWon) || (!aIsHigherRank && !aWon);
+        matchupFactor = higherWon
+          ? EXPECTED_WIN_FACTOR_BY_TIER[tier]
+          : UPSET_WIN_FACTOR_BY_TIER[tier];
+      }
     }
 
     const delta = K * (actualA - expectedA) * weight * handicapFactor * matchupFactor;
