@@ -1126,11 +1126,12 @@ function computeRatingsFargoLiteHalf(players, matches) {
 
   const K = 40;
   const D = 200;
-  const GAP_REF = 120;
-  const ALPHA = 0.45;
-  const BETA = 0.8;
-  const MIN_EXPECTED_FACTOR = 0.35;
-  const MAX_UPSET_FACTOR = 2.2;
+  const RANK_TIER_1 = 5;
+  const RANK_TIER_2 = 10;
+  const RANK_TIER_3 = 15;
+  const EXPECTED_WIN_FACTOR_BY_TIER = [1.0, 0.9, 0.78, 0.65];
+  const UPSET_WIN_FACTOR_BY_TIER = [1.0, 1.2, 1.45, 1.75];
+  const playerIds = players.map((p) => p.id);
 
   for (const m of sorted) {
     const A = m.leftPlayerId;
@@ -1164,15 +1165,29 @@ function computeRatingsFargoLiteHalf(players, matches) {
     }
 
     let matchupFactor = 1.0;
-    const gap = Math.abs(Ra - Rb);
-    if (gap > 0) {
-      const g = clamp(gap / GAP_REF, 0, 1.5);
-      const aIsHigher = Ra > Rb;
+    const rankedIds = [...playerIds].sort((id1, id2) => {
+      const r2 = rating.get(id2) ?? 500;
+      const r1 = rating.get(id1) ?? 500;
+      if (r2 !== r1) return r2 - r1;
+      return String(id1).localeCompare(String(id2));
+    });
+    const rankMap = new Map(rankedIds.map((id, idx) => [id, idx + 1]));
+    const rankA = rankMap.get(A) ?? 0;
+    const rankB = rankMap.get(B) ?? 0;
+    const rankDiff = Math.abs(rankA - rankB);
+
+    let tier = 0;
+    if (rankDiff >= RANK_TIER_3) tier = 3;
+    else if (rankDiff >= RANK_TIER_2) tier = 2;
+    else if (rankDiff >= RANK_TIER_1) tier = 1;
+
+    if (tier > 0 && rankA > 0 && rankB > 0 && rankA !== rankB) {
+      const aIsHigherRank = rankA < rankB;
       const aWon = aScore > bScore;
-      const higherWon = (aIsHigher && aWon) || (!aIsHigher && !aWon);
+      const higherWon = (aIsHigherRank && aWon) || (!aIsHigherRank && !aWon);
       matchupFactor = higherWon
-        ? Math.max(MIN_EXPECTED_FACTOR, 1 - ALPHA * g)
-        : Math.min(MAX_UPSET_FACTOR, 1 + BETA * g);
+        ? EXPECTED_WIN_FACTOR_BY_TIER[tier]
+        : UPSET_WIN_FACTOR_BY_TIER[tier];
     }
 
     const delta = K * (actualA - expectedA) * weight * handicapFactor * matchupFactor;
