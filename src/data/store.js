@@ -1117,10 +1117,20 @@ function computeRatingsFargoLiteHalf(players, matches) {
   const rating = new Map(players.map((p) => [p.id, 500]));
   const played = new Map(players.map((p) => [p.id, 0])); // 真实参与场次（不折算），用于稳健
 
-  const sorted = [...matches].sort((a, b) => new Date(a.dateISO).getTime() - new Date(b.dateISO).getTime());
+  // Tie-break by id so recalculation remains deterministic when dateISO is equal.
+  const sorted = [...matches].sort((a, b) => {
+    const dt = new Date(a.dateISO).getTime() - new Date(b.dateISO).getTime();
+    if (dt !== 0) return dt;
+    return String(a.id ?? "").localeCompare(String(b.id ?? ""));
+  });
 
   const K = 40;
   const D = 200;
+  const GAP_REF = 120;
+  const ALPHA = 0.45;
+  const BETA = 0.8;
+  const MIN_EXPECTED_FACTOR = 0.35;
+  const MAX_UPSET_FACTOR = 2.2;
 
   for (const m of sorted) {
     const A = m.leftPlayerId;
@@ -1153,7 +1163,19 @@ function computeRatingsFargoLiteHalf(players, matches) {
       if (receiverWon) handicapFactor = 0.5;  // <-- 你要的 0.5 口径
     }
 
-    const delta = K * (actualA - expectedA) * weight * handicapFactor;
+    let matchupFactor = 1.0;
+    const gap = Math.abs(Ra - Rb);
+    if (gap > 0) {
+      const g = clamp(gap / GAP_REF, 0, 1.5);
+      const aIsHigher = Ra > Rb;
+      const aWon = aScore > bScore;
+      const higherWon = (aIsHigher && aWon) || (!aIsHigher && !aWon);
+      matchupFactor = higherWon
+        ? Math.max(MIN_EXPECTED_FACTOR, 1 - ALPHA * g)
+        : Math.min(MAX_UPSET_FACTOR, 1 + BETA * g);
+    }
+
+    const delta = K * (actualA - expectedA) * weight * handicapFactor * matchupFactor;
 
     rating.set(A, Ra + delta * robustA);
     rating.set(B, Rb - delta * robustB);
