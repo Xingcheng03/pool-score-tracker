@@ -244,7 +244,7 @@ select:focus {
 }
 
 .leaderboardTopCard {
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   border-radius: 16px;
   padding: 14px;
   background: #ffffff;
@@ -256,11 +256,11 @@ select:focus {
   flex: 1 1 0;
   min-height: 210px;
   overflow: hidden;
-  --glow-color: rgba(37, 99, 235, 0.35);
+  --glow-color: rgba(37, 99, 235, 0.2);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.65) inset,
-    0 0 12px 2px var(--glow-color),
-    0 0 22px 4px color-mix(in srgb, var(--glow-color) 50%, transparent),
+    0 0 0 1px rgba(255, 255, 255, 0.5) inset,
+    0 0 8px 1px var(--glow-color),
+    0 0 14px 2px color-mix(in srgb, var(--glow-color) 45%, transparent),
     var(--shadow);
 }
 
@@ -270,21 +270,21 @@ select:focus {
 }
 
 .leaderboardTopCardRank1 {
-  border-color: #e6c673;
-  background: #fff9e7;
-  --glow-color: rgba(230, 198, 115, 0.5);
+  border-color: #dfbe61;
+  background: #f8f1dc;
+  --glow-color: rgba(217, 178, 75, 0.22);
 }
 
 .leaderboardTopCardRank2 {
-  border-color: #c7ccd4;
-  background: #f8fafc;
-  --glow-color: rgba(142, 152, 168, 0.45);
+  border-color: #bcc5d2;
+  background: #eef2f8;
+  --glow-color: rgba(142, 152, 168, 0.2);
 }
 
 .leaderboardTopCardRank3 {
-  border-color: #d7a98c;
-  background: #fff8f4;
-  --glow-color: rgba(205, 127, 50, 0.45);
+  border-color: #d3a17f;
+  background: #f8eee9;
+  --glow-color: rgba(205, 127, 50, 0.2);
 }
 
 
@@ -364,6 +364,7 @@ select:focus {
 .leaderboardMainTable td {
   padding: 10px 10px;
   font-size: 13px;
+  text-align: center;
 }
 
 .leaderboardWinLoseCard {
@@ -390,6 +391,11 @@ select:focus {
 
 .leaderboardMiniTable {
   min-width: 0;
+}
+
+.leaderboardMiniTable th,
+.leaderboardMiniTable td {
+  text-align: center;
 }
 
 .leaderboardWinLoseCard.isDense .leaderboardWinLoseHead {

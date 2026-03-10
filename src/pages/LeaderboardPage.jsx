@@ -235,7 +235,7 @@ export default function LeaderboardPage() {
                     key={label}
                     onClick={() => key && toggleSort(key)}
                     style={{
-                      textAlign: "left",
+                      textAlign: "center",
                       padding: "12px 12px",
                       fontSize: 13,
                       color: "var(--muted)",
