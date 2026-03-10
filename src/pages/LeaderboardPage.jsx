@@ -199,9 +199,6 @@ export default function LeaderboardPage() {
         </div>
       </div>
 
-      <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 10 }}>
-        提示：可信度越高（场次越多），积分波动越小，排名更可靠。
-      </div>
       <div
         className="card"
         style={{
