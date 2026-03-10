@@ -231,7 +231,7 @@ select:focus {
 .leaderboardSplit {
   margin-top: 12px;
   display: grid;
-  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  grid-template-columns: minmax(260px, 300px) minmax(0, 1fr) minmax(260px, 320px);
   gap: 12px;
   align-items: stretch;
 }
@@ -344,7 +344,7 @@ select:focus {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px 10px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.3;
   font-weight: 600;
   color: var(--muted);
@@ -353,7 +353,47 @@ select:focus {
 .leaderboardTableCard {
   margin-top: 0;
   height: 100%;
-  border: 4px solid #111111;
+  border: 2px solid #111111;
+}
+
+.leaderboardMainTable {
+  min-width: 900px;
+}
+
+.leaderboardMainTable th,
+.leaderboardMainTable td {
+  padding: 10px 10px;
+  font-size: 13px;
+}
+
+.leaderboardWinLoseCard {
+  border: 2px solid #111111;
+  background: #fff;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.leaderboardWinLoseHead {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--text);
+  text-align: center;
+}
+
+.leaderboardWinLoseWrap {
+  flex: 1;
+  overflow: hidden;
+}
+
+.leaderboardMiniTable {
+  min-width: 0;
+}
+
+.leaderboardWinLoseCard.isDense .leaderboardWinLoseHead {
+  padding: 8px 10px;
 }
 
 table {

@@ -1,6 +1,13 @@
 ﻿// src/pages/LeaderboardPage.jsx
 import React, { useMemo, useState } from "react";
-import { buildFargoLiteLeaderboard, tagLabel, exportLeaderboardToJSON, exportLeaderboardToExcel } from "../data/store.js";
+import {
+  buildFargoLiteLeaderboard,
+  tagLabel,
+  exportLeaderboardToJSON,
+  exportLeaderboardToExcel,
+  getPlayers,
+  getMatches,
+} from "../data/store.js";
 
 export default function LeaderboardPage() {
   const [q, setQ] = useState("");
@@ -32,6 +39,64 @@ export default function LeaderboardPage() {
   const topCount = Math.min(3, rows.length);
   const topThree = rows.slice(0, topCount);
   const tableRows = rows.slice(topCount);
+  const winLoseRows = useMemo(() => {
+    const players = getPlayers();
+    const matches = [...getMatches("all")].sort(
+      (a, b) => new Date(a.dateISO).getTime() - new Date(b.dateISO).getTime(),
+    );
+
+    const state = new Map(
+      players.map((p) => [
+        p.id,
+        {
+          id: p.id,
+          name: p.name ?? "Unknown",
+          wins: 0,
+          losses: 0,
+          winStreak: 0,
+          loseStreak: 0,
+        },
+      ]),
+    );
+
+    for (const m of matches) {
+      if (!m?.winnerId) continue;
+      const leftId = m.leftPlayerId;
+      const rightId = m.rightPlayerId;
+      const winnerId = m.winnerId;
+      const loserId = winnerId === leftId ? rightId : winnerId === rightId ? leftId : null;
+      if (!winnerId || !loserId) continue;
+
+      const winner = state.get(winnerId);
+      const loser = state.get(loserId);
+      if (!winner || !loser) continue;
+
+      winner.wins += 1;
+      loser.losses += 1;
+      winner.winStreak += 1;
+      winner.loseStreak = 0;
+      loser.loseStreak += 1;
+      loser.winStreak = 0;
+    }
+
+    const qLower = q.trim().toLowerCase();
+    return [...state.values()]
+      .filter((r) => !qLower || r.name.toLowerCase().includes(qLower))
+      .map((r) => {
+        const ratio = r.losses === 0 ? (r.wins > 0 ? Number.POSITIVE_INFINITY : 0) : r.wins / r.losses;
+        const streak = r.winStreak > 0 ? `连胜 ${r.winStreak}` : r.loseStreak > 0 ? `连败 ${r.loseStreak}` : "-";
+        return { ...r, ratio, streak };
+      })
+      .sort((a, b) => {
+        if (b.ratio !== a.ratio) return b.ratio - a.ratio;
+        if (b.wins !== a.wins) return b.wins - a.wins;
+        if (a.losses !== b.losses) return a.losses - b.losses;
+        return String(a.name).localeCompare(String(b.name), "zh-Hans-CN", { sensitivity: "base" });
+      });
+  }, [q]);
+  const miniDense = winLoseRows.length > 14;
+  const miniFontSize = winLoseRows.length > 20 ? 11 : winLoseRows.length > 16 ? 12 : 13;
+  const miniCellPad = winLoseRows.length > 20 ? "7px 8px" : winLoseRows.length > 16 ? "9px 9px" : "11px 10px";
   const isBigDaggerTier = (tier) => String(tier ?? "").includes("大匕首");
   const isDaggerTier = (tier) => String(tier ?? "").includes("匕首");
   const tierStyle = (tier) => {
@@ -152,7 +217,7 @@ export default function LeaderboardPage() {
 
         {/* Table */}
         <div className="card leaderboardTableCard" style={{ padding: 0, overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <table className="leaderboardMainTable" style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead style={{ background: "var(--soft)" }}>
               <tr>
                 {[
@@ -213,6 +278,38 @@ export default function LeaderboardPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className={`card leaderboardWinLoseCard${miniDense ? " isDense" : ""}`} style={{ padding: 0, overflow: "hidden" }}>
+          <div className="leaderboardWinLoseHead">胜负战绩榜</div>
+          <div className="leaderboardWinLoseWrap">
+            <table className="leaderboardMiniTable" style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead style={{ background: "var(--soft)" }}>
+                <tr>
+                  <th style={{ padding: miniCellPad, fontSize: miniFontSize }}>#</th>
+                  <th style={{ padding: miniCellPad, fontSize: miniFontSize }}>球员</th>
+                  <th style={{ padding: miniCellPad, fontSize: miniFontSize }}>战绩</th>
+                  <th style={{ padding: miniCellPad, fontSize: miniFontSize }}>连击</th>
+                </tr>
+              </thead>
+              <tbody>
+                {winLoseRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} style={{ padding: miniCellPad, color: "var(--muted)", fontSize: miniFontSize }}>暂无数据</td>
+                  </tr>
+                ) : (
+                  winLoseRows.map((r, idx) => (
+                    <tr key={r.id} style={{ borderBottom: "1px solid var(--line)" }}>
+                      <td style={{ padding: miniCellPad, fontSize: miniFontSize }}>{idx + 1}</td>
+                      <td style={{ padding: miniCellPad, fontWeight: 700, fontSize: miniFontSize }}>{r.name}</td>
+                      <td style={{ padding: miniCellPad, fontSize: miniFontSize }}>{r.wins}胜 {r.losses}负</td>
+                      <td style={{ padding: miniCellPad, fontSize: miniFontSize }}>{r.streak}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
