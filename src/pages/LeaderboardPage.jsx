@@ -1,4 +1,4 @@
-// src/pages/LeaderboardPage.jsx
+﻿// src/pages/LeaderboardPage.jsx
 import React, { useMemo, useState } from "react";
 import { buildFargoLiteLeaderboard, tagLabel, exportLeaderboardToJSON, exportLeaderboardToExcel } from "../data/store.js";
 
@@ -7,8 +7,8 @@ export default function LeaderboardPage() {
   const [mode, setMode] = useState("all"); // all | practice | live
   const [minMatches, setMinMatches] = useState(0);
 
-  // 排序：rating | rackWinRate | trend10 | matches
-  // ⚠️ 注意：我们传给 store 时把 matches 映射成 effMatches（折算场次）
+  // 鎺掑簭锛歳ating | rackWinRate | trend10 | matches
+  // 鈿狅笍 娉ㄦ剰锛氭垜浠紶缁?store 鏃舵妸 matches 鏄犲皠鎴?effMatches锛堟姌绠楀満娆★級
   const [sortKey, setSortKey] = useState("rating");
   const [sortDir, setSortDir] = useState("desc"); // asc | desc
 
@@ -17,7 +17,7 @@ export default function LeaderboardPage() {
       rating: "rating",
       rackWinRate: "rackWinRate",
       trend10: "trend10",
-      matches: "matches", // store 内部会用 effMatches 做排序字段（见你实现）
+      matches: "matches", // store 鍐呴儴浼氱敤 effMatches 鍋氭帓搴忓瓧娈碉紙瑙佷綘瀹炵幇锛?
     };
 
     return buildFargoLiteLeaderboard({
@@ -28,6 +28,10 @@ export default function LeaderboardPage() {
       sortDir,
     });
   }, [mode, q, minMatches, sortKey, sortDir]);
+
+  const topCount = Math.min(3, rows.length);
+  const topThree = rows.slice(0, topCount);
+  const tableRows = rows.slice(topCount);
 
   function toggleSort(k) {
     if (sortKey === k) setSortDir(sortDir === "asc" ? "desc" : "asc");
@@ -55,7 +59,7 @@ export default function LeaderboardPage() {
             className="input"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="搜索球员…"
+            placeholder="搜索球员..."
           />
 
           <select className="input" value={mode} onChange={(e) => setMode(e.target.value)}>
@@ -98,69 +102,101 @@ export default function LeaderboardPage() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="card" style={{ marginTop: 12, padding: 0, overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead style={{ background: "var(--soft)" }}>
-            <tr>
-              {[
-                ["#", null],
-                ["球员", null],
-                ["Rating", "rating"],
-                ["段位", null],
-                ["可信度", "matches"],
-                ["局胜率", "rackWinRate"],
-                ["最近10场趋势", "trend10"],
-                ["直播局胜率", null],
-                ["练习局胜率", null],
-              ].map(([label, key]) => (
-                <th
-                  key={label}
-                  onClick={() => key && toggleSort(key)}
-                  style={{
-                    textAlign: "left",
-                    padding: "12px 12px",
-                    fontSize: 13,
-                    color: "var(--muted)",
-                    borderBottom: "1px solid var(--line)",
-                    cursor: key ? "pointer" : "default",
-                    userSelect: "none",
-                  }}
-                >
-                  {label}{key && sortKey === key ? (sortDir === "asc" ? " ▲" : " ▼") : ""}
-                </th>
-              ))}
-            </tr>
-          </thead>
+      <div className="leaderboardSplit">
+        {topThree.length > 0 && (
+          <div className="leaderboardTop3">
+            {topThree.map((r, idx) => {
+              const rank = idx + 1;
+              return (
+                <div key={r.id} className={`leaderboardTopCard leaderboardTopCardRank${rank}`}>
+                  <div className="leaderboardTopCardHeader">
+                    <div className={`leaderboardTopCardRankNum leaderboardTopCardRankNum${rank}`}>{rank}</div>
+                    <div className="leaderboardTopCardName">{r.name}</div>
+                    {rank === 1 && <div className="leaderboardTopCardTrophy">{"\uD83C\uDFC6"}</div>}
+                  </div>
+                  <div className="leaderboardTopCardStats">
+                    <span>Rating: {Math.round(r.rating)}</span>
+                    <span>段位: {r.tier}</span>
+                    <span style={{ color: r.trend10 >= 0 ? "var(--primary)" : "var(--danger)" }}>
+                      Trend: {r.trend10 >= 0 ? "+" : ""}
+                      {r.trend10}
+                    </span>
+                    <span>局胜率: {(r.rackWinRate * 100).toFixed(1)}%</span>
+                    <span>练习局胜率: {(r.pracRackWinRate * 100).toFixed(1)}%</span>
+                    <span>直播局胜率: {(r.liveRackWinRate * 100).toFixed(1)}%</span>
+                    <span>可信度: {r.confidence}</span>
+                    <span>场次/局数: {r.totalMatches}/{r.racks}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
-          <tbody>
-            {rows.map((r, idx) => (
-              <tr key={r.id} style={{ borderBottom: "1px solid var(--line)" }}>
-                <td style={{ padding: 12, fontSize: 13 }}>{idx + 1}</td>
-                <td style={{ padding: 12, fontWeight: 700 }}>{r.name}</td>
-                <td style={{ padding: 12 }}>{Math.round(r.rating)}</td>
-                <td style={{ padding: 12 }}>{r.tier}</td>
-                <td style={{ padding: 12 }}>
-                  {r.confidence} · {r.totalMatches}场 / {r.racks}局
-                </td>
-                <td style={{ padding: 12 }}>{(r.rackWinRate * 100).toFixed(1)}%</td>
-                <td style={{ padding: 12, color: r.trend10 >= 0 ? "var(--primary)" : "var(--danger)" }}>
-                  {r.trend10 >= 0 ? "+" : ""}{r.trend10}
-                </td>
-                <td style={{ padding: 12 }}>{(r.liveRackWinRate * 100).toFixed(1)}%</td>
-                <td style={{ padding: 12 }}>{(r.pracRackWinRate * 100).toFixed(1)}%</td>
-              </tr>
-            ))}
-
-            {rows.length === 0 && (
+        {/* Table */}
+        <div className="card leaderboardTableCard" style={{ padding: 0, overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead style={{ background: "var(--soft)" }}>
               <tr>
-                <td colSpan={9} style={{ padding: 18, color: "var(--muted)" }}>
-                  暂无符合条件的数据。
-                </td>
+                {[
+                  ["#", null],
+                  ["球员", null],
+                  ["Rating", "rating"],
+                  ["段位", null],
+                  ["可信度", "matches"],
+                  ["局胜率", "rackWinRate"],
+                  ["最近10场趋势", "trend10"],
+                  ["直播局胜率", null],
+                  ["练习局胜率", null],
+                ].map(([label, key]) => (
+                  <th
+                    key={label}
+                    onClick={() => key && toggleSort(key)}
+                    style={{
+                      textAlign: "left",
+                      padding: "12px 12px",
+                      fontSize: 13,
+                      color: "var(--muted)",
+                      borderBottom: "1px solid var(--line)",
+                      cursor: key ? "pointer" : "default",
+                      userSelect: "none",
+                    }}
+                  >
+                    {label}{key && sortKey === key ? (sortDir === "asc" ? " ▲" : " ▼") : ""}
+                  </th>
+                ))}
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {tableRows.map((r, idx) => (
+                <tr key={r.id} style={{ borderBottom: "1px solid var(--line)" }}>
+                  <td style={{ padding: 12, fontSize: 13 }}>{topCount + idx + 1}</td>
+                  <td style={{ padding: 12, fontWeight: 700 }}>{r.name}</td>
+                  <td style={{ padding: 12 }}>{Math.round(r.rating)}</td>
+                  <td style={{ padding: 12 }}>{r.tier}</td>
+                  <td style={{ padding: 12 }}>
+                    {r.confidence} · {r.totalMatches}场 / {r.racks}局
+                  </td>
+                  <td style={{ padding: 12 }}>{(r.rackWinRate * 100).toFixed(1)}%</td>
+                  <td style={{ padding: 12, color: r.trend10 >= 0 ? "var(--primary)" : "var(--danger)" }}>
+                    {r.trend10 >= 0 ? "+" : ""}{r.trend10}
+                  </td>
+                  <td style={{ padding: 12 }}>{(r.liveRackWinRate * 100).toFixed(1)}%</td>
+                  <td style={{ padding: 12 }}>{(r.pracRackWinRate * 100).toFixed(1)}%</td>
+                </tr>
+              ))}
+
+              {tableRows.length === 0 && (
+                <tr>
+                  <td colSpan={9} style={{ padding: 18, color: "var(--muted)" }}>
+                    暂无符合条件的数据。
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 10 }}>
@@ -169,88 +205,20 @@ export default function LeaderboardPage() {
       <div
         className="card"
         style={{
-            marginTop: 16,
-            fontSize: 13,
-            lineHeight: 1.7,
-            color: "var(--muted)",
+          marginTop: 16,
+          fontSize: 13,
+          lineHeight: 1.7,
+          color: "var(--muted)",
         }}
-        >
+      >
         <div style={{ fontWeight: 900, marginBottom: 6, color: "var(--text)" }}>
-            积分计算规则说明（Fargo-lite）
+          积分计算规则说明（Fargo-lite）
         </div>
-
-        <div style={{ marginBottom: 8 }}>
-            <b>1. 基本思想</b><br />
-            每位球员都有一个初始 Rating（500）。系统按比赛时间顺序，逐场比较
-            「<b>实际局胜率</b>」与「<b>基于对手强度的预期局胜率</b>」，根据差异对
-            Rating 进行增减。
-        </div>
-
-        <div style={{ marginBottom: 8 }}>
-            <b>2. 实际局胜率（Actual）</b><br />
-            实际局胜率 = 本场赢的局数 ÷ 本场总局数。<br />
-            例如：7 : 5 → 实际局胜率 = 7 / 12。
-        </div>
-
-        <div style={{ marginBottom: 8 }}>
-            <b>3. 预期局胜率（Expected）</b><br />
-            由双方当前 Rating 计算，Rating 越高的一方，系统预期其局胜率越高。
-            若你击败了比你更强的对手，得到的加分会更多；反之亦然。
-        </div>
-
-        <div style={{ marginBottom: 8 }}>
-            <b>4. 强弱对阵规则（文字说明）</b><br />
-            若双方排名差距小于 5 名（例如只差 2-3 名），按正常逻辑结算，不做额外加权。<br />
-            只有排名差距达到分档时才启用加权：差 5 名一档、差 10 名一档、差 15 名一档。<br />
-            在这些分档中，若高排名选手赢，积分变化会缩小（高分少加、低分少扣）；
-            若低排名选手爆冷赢，积分变化会放大（低分多加、高分多扣）。<br />
-            注意：放门比赛不套用这条强弱对阵分档规则。
-        </div>
-
-        <div style={{ marginBottom: 8 }}>
-            <b>5. 比赛标签权重</b><br />
-            直播比赛权重为 1.0，练习赛权重为 0.7。<br />
-            同样的表现，在直播比赛中的积分变化幅度更大。
-        </div>
-
-        <div style={{ marginBottom: 8 }}>
-            <b>6. 放门（让分）规则 —— 半场（0.5）折算</b><br />
-            若开启放门，且<b>被放门方最终获胜</b>，则该场比赛只按
-            <b>0.5 场</b>计入统计与积分计算：<br />
-            • 积分变化幅度减半<br />
-            • 局胜率统计中的局数按 0.5允许计入<br />
-            若放门方获胜，则按正常整场计算（不折算）。
-        </div>
-
-        <div style={{ marginBottom: 8 }}>
-            <b>7. 稳定系数（场次越多越稳定）</b><br />
-            球员参与的比赛场次越多，单场比赛对 Rating 的影响越小，
-            用于防止早期少量比赛造成积分剧烈波动。
-        </div>
-
-        <div style={{ marginBottom: 8 }}>
-            <b>8. Rating 更新方式（简化表达）</b><br />
-            Rating 变化 ≈ K ×（实际局胜率 − 预期局胜率）× 比赛权重 × 放门折算 × 排名分档系数 × 稳定系数。<br />
-            排名分档系数规则：<br />
-            • 差距 &lt; 5 名：系数 = 1.00（不加权）<br />
-            • 差距 [5,10)：高排赢 0.90；低排爆冷赢 1.20<br />
-            • 差距 [10,15)：高排赢 0.78；低排爆冷赢 1.45<br />
-            • 差距 ≥ 15：高排赢 0.65；低排爆冷赢 1.75
-        </div>
-
-        <div style={{ marginBottom: 8 }}>
-            <b>9. 局胜率与可信度</b><br />
-            表格中的局胜率、直播局胜率、练习局胜率，均基于局数统计，
-            并与放门的 0.5 场折算规则保持一致。<br />
-            比赛（折算后）场次越多，可信度越高，排名越可靠。
-        </div>
-
         <div>
-            <b>10. 最近 10 场趋势</b><br />
-            用最近 10 场比赛的比分差近似表示当前状态，仅用于趋势展示，
-            不直接参与 Rating 计算。
+          评分由局胜率、对手强度、比赛标签权重与稳定系数共同计算。
+          场次越多，评分越稳定。放门规则会按半场折算影响统计与积分波动。
         </div>
-        </div>
+      </div>
 
     </div>
   );
