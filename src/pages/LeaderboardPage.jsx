@@ -32,6 +32,21 @@ export default function LeaderboardPage() {
   const topCount = Math.min(3, rows.length);
   const topThree = rows.slice(0, topCount);
   const tableRows = rows.slice(topCount);
+  const isBigDaggerTier = (tier) => String(tier ?? "").includes("大匕首");
+  const isDaggerTier = (tier) => String(tier ?? "").includes("匕首");
+  const tierStyle = (tier) => {
+    if (isBigDaggerTier(tier)) {
+      return {
+        color: "var(--danger)",
+        textShadow: "0 0 6px rgba(225,29,72,.55), 0 0 12px rgba(225,29,72,.35)",
+        WebkitTextStroke: "0.4px rgba(255, 120, 150, .7)",
+      };
+    }
+    if (isDaggerTier(tier)) {
+      return { color: "var(--danger)" };
+    }
+    return undefined;
+  };
 
   function toggleSort(k) {
     if (sortKey === k) setSortDir(sortDir === "asc" ? "desc" : "asc");
@@ -116,7 +131,9 @@ export default function LeaderboardPage() {
                   </div>
                   <div className="leaderboardTopCardStats">
                     <span>Rating: {Math.round(r.rating)}</span>
-                    <span>段位: {r.tier}</span>
+                    <span style={tierStyle(r.tier)}>
+                      段位: {r.tier}
+                    </span>
                     <span style={{ color: r.trend10 >= 0 ? "var(--primary)" : "var(--danger)" }}>
                       Trend: {r.trend10 >= 0 ? "+" : ""}
                       {r.trend10}
@@ -125,7 +142,7 @@ export default function LeaderboardPage() {
                     <span>练习局胜率: {(r.pracRackWinRate * 100).toFixed(1)}%</span>
                     <span>直播局胜率: {(r.liveRackWinRate * 100).toFixed(1)}%</span>
                     <span>可信度: {r.confidence}</span>
-                    <span>场次/局数: {r.totalMatches}/{r.racks}</span>
+                    <span>局数: {r.racks}</span>
                   </div>
                 </div>
               );
@@ -174,7 +191,7 @@ export default function LeaderboardPage() {
                   <td style={{ padding: 12, fontSize: 13 }}>{topCount + idx + 1}</td>
                   <td style={{ padding: 12, fontWeight: 700 }}>{r.name}</td>
                   <td style={{ padding: 12 }}>{Math.round(r.rating)}</td>
-                  <td style={{ padding: 12 }}>{r.tier}</td>
+                  <td style={{ padding: 12, ...tierStyle(r.tier) }}>{r.tier}</td>
                   <td style={{ padding: 12 }}>
                     {r.confidence} · {r.totalMatches}场 / {r.racks}局
                   </td>
