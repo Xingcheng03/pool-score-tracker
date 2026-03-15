@@ -505,9 +505,9 @@ export function exportLeaderboardToJSON(opts = {}) {
     // 可选：把你“0.5 放门规则”的说明也塞进去，方便别人看 JSON 就懂
     notes: {
       handicapRule:
-        "若 isHandicap=true 且 handicapReceiverId 获胜，则该场按 0.5 场折算（用于局数统计与 Rating 更新）；否则按 1.0 场。",
+        "放门统计仍按半场口径：若 isHandicap=true 且 handicapReceiverId 获胜，则该场按 0.5 场折算局数与场次；否则按 1.0 场。",
       ratingRule:
-        "Rating 约等于 K*(actualRackWR-expectedRackWR)*tagWeight*handicapFactor*robustness，其中练习赛权重0.7，直播权重1.0。",
+        "Rating 约等于 K*(actualRackWR-expectedRackWR)*matchWeight*robustness。练习赛基准权重=1.0，直播=1.5；放门不套用强弱分档，若被放门方获胜则 Rating 权重按对应标签减半（练习0.5，直播0.75）。非放门强弱分档：练习<5=1.0，5-9=0.8/1.2，10-14=0.6/1.4，>=15=0.4/1.6；直播<5=1.5，5-9=1.3/1.7，10-14=1.1/1.9，>=15=0.9/2.1。",
     },
   };
 
@@ -619,7 +619,7 @@ export async function exportLeaderboardToExcel(opts = {}) {
   addTitleRow(note, "积分计算规则（Fargo-lite + 放门半场）");
 
   note.addRow([
-    "1) Rating 初始值：每位球员初始 Rating = 1000。",
+    "1) Rating 初始值：每位球员初始 Rating = 500。",
   ]);
   note.addRow([
     "2) 按时间顺序逐场迭代：越早的比赛先计算，用当前双方 Rating 估计预期局胜率。",
@@ -631,19 +631,28 @@ export async function exportLeaderboardToExcel(opts = {}) {
     "4) 预期局胜率 Expected = 1 / (1 + 10^((对手Rating-我Rating)/D))，D=200。",
   ]);
   note.addRow([
-    "5) 标签权重：直播 weight=1.0，练习 weight=0.7。",
+    "5) 标签基准权重：练习赛 weight=1.0，直播 weight=1.5。",
   ]);
   note.addRow([
     "6) 稳健系数：robust = 1 / sqrt(1 + 场次/10)，场次越多单场波动越小。",
   ]);
   note.addRow([
-    "7) 放门半场折算：若 isHandicap=true 且 被放门方(handicapReceiverId) 获胜，则 handicapFactor=0.5；否则为 1.0。",
+    "7) 放门统计口径：若 isHandicap=true 且 被放门方(handicapReceiverId) 获胜，则局数/折算场次按 0.5 计；否则按 1.0 计。",
   ]);
   note.addRow([
-    "8) 单场 Rating 更新（A 为 left，B 为 right）：delta = K*(ActualA-ExpectedA)*weight*handicapFactor；A += delta*robustA，B -= delta*robustB。K=40。",
+    "8) 放门比赛不套用强弱分档；Rating 权重直接按标签结算：练习赛为 1.0 / 0.5，直播为 1.5 / 0.75（前者是放门方赢，后者是被放门方赢）。",
   ]);
   note.addRow([
-    "9) 积分榜局胜率统计：局数与赢局数也按 handicapFactor 折算，确保与 0.5 规则一致。",
+    "9) 非放门强弱分档权重（练习赛）：<5 名=1.0；5-9 名=高排赢 0.8 / 爆冷赢 1.2；10-14 名=0.6 / 1.4；>=15 名=0.4 / 1.6。",
+  ]);
+  note.addRow([
+    "10) 非放门强弱分档权重（直播）：<5 名=1.5；5-9 名=高排赢 1.3 / 爆冷赢 1.7；10-14 名=1.1 / 1.9；>=15 名=0.9 / 2.1。",
+  ]);
+  note.addRow([
+    "11) 单场 Rating 更新（A 为 left，B 为 right）：delta = K*(ActualA-ExpectedA)*matchWeight；A += delta*robustA，B -= delta*robustB。K=40。",
+  ]);
+  note.addRow([
+    "12) 积分榜局胜率统计：局数与赢局数仍按放门 0.5 规则折算，确保排行榜统计口径一致。",
   ]);
 
   const buf = await wb.xlsx.writeBuffer();
@@ -1129,8 +1138,20 @@ function computeRatingsFargoLiteHalf(players, matches) {
   const RANK_TIER_1 = 5;
   const RANK_TIER_2 = 10;
   const RANK_TIER_3 = 15;
-  const EXPECTED_WIN_FACTOR_BY_TIER = [1.0, 0.9, 0.78, 0.65];
-  const UPSET_WIN_FACTOR_BY_TIER = [1.0, 1.2, 1.45, 1.75];
+  const BASE_WEIGHT_BY_TAG = {
+    practice: 1.0,
+    live: 1.5,
+  };
+  const NON_HANDICAP_WEIGHT_BY_TAG = {
+    practice: {
+      higher: [1.0, 0.8, 0.6, 0.4],
+      upset: [1.0, 1.2, 1.4, 1.6],
+    },
+    live: {
+      higher: [1.5, 1.3, 1.1, 0.9],
+      upset: [1.5, 1.7, 1.9, 2.1],
+    },
+  };
   const playerIds = players.map((p) => p.id);
 
   for (const m of sorted) {
@@ -1143,30 +1164,30 @@ function computeRatingsFargoLiteHalf(players, matches) {
     const totalRacks = aScore + bScore;
     if (totalRacks <= 0) continue;
 
-    const Ra = rating.get(A) ?? 1000;
-    const Rb = rating.get(B) ?? 1000;
+    const Ra = rating.get(A) ?? 500;
+    const Rb = rating.get(B) ?? 500;
 
     const expectedA = expectedRackWinRate(Ra, Rb, D);
     const actualA = aScore / totalRacks;
 
     const tag = m.tag === "live" ? "live" : "practice";
-    const weight = tag === "live" ? 1.0 : 0.7;
+    const baseWeight = BASE_WEIGHT_BY_TAG[tag];
 
     const pa = played.get(A) ?? 0;
     const pb = played.get(B) ?? 0;
     const robustA = 1 / Math.sqrt(1 + pa / 10);
     const robustB = 1 / Math.sqrt(1 + pb / 10);
 
-    // ✅ 放门半场：如果 receiverWon，则这场对双方更新“只算半场”
-    let handicapFactor = 1.0;
+    // Final per-match weight: tag baseline, handicap handling, and non-handicap strength tiers.
+    let matchWeight = baseWeight;
     if (m.isHandicap && m.handicapReceiverId && m.winnerId) {
       const receiverWon = m.winnerId === m.handicapReceiverId;
-      if (receiverWon) handicapFactor = 0.5;  // <-- 你要的 0.5 口径
+      if (receiverWon) matchWeight = baseWeight / 2;
     }
 
-    let matchupFactor = 1.0;
     // Handicap matches skip strength-gap tiering because strength difference is already compensated.
     if (!m.isHandicap) {
+      const tierWeights = NON_HANDICAP_WEIGHT_BY_TAG[tag];
       const rankedIds = [...playerIds].sort((id1, id2) => {
         const r2 = rating.get(id2) ?? 500;
         const r1 = rating.get(id1) ?? 500;
@@ -1183,17 +1204,16 @@ function computeRatingsFargoLiteHalf(players, matches) {
       else if (rankDiff >= RANK_TIER_2) tier = 2;
       else if (rankDiff >= RANK_TIER_1) tier = 1;
 
+      matchWeight = tierWeights.higher[tier];
       if (tier > 0 && rankA > 0 && rankB > 0 && rankA !== rankB) {
         const aIsHigherRank = rankA < rankB;
         const aWon = aScore > bScore;
         const higherWon = (aIsHigherRank && aWon) || (!aIsHigherRank && !aWon);
-        matchupFactor = higherWon
-          ? EXPECTED_WIN_FACTOR_BY_TIER[tier]
-          : UPSET_WIN_FACTOR_BY_TIER[tier];
+        matchWeight = higherWon ? tierWeights.higher[tier] : tierWeights.upset[tier];
       }
     }
 
-    const delta = K * (actualA - expectedA) * weight * handicapFactor * matchupFactor;
+    const delta = K * (actualA - expectedA) * matchWeight;
 
     rating.set(A, Ra + delta * robustA);
     rating.set(B, Rb - delta * robustB);
