@@ -91,13 +91,15 @@ function Section({ title, stats, playerId }) {
                 <th>赛制</th>
                 <th>对手</th>
                 <th>比分</th>
+                <th>是否放门</th>
+                <th>放门方</th>
                 <th>结果</th>
               </tr>
             </thead>
             <tbody>
               {stats.matches.length === 0 ? (
                 <tr>
-                  <td colSpan="6" style={{ color: "var(--muted)" }}>
+                  <td colSpan="8" style={{ color: "var(--muted)" }}>
                     暂无记录
                   </td>
                 </tr>
@@ -108,6 +110,10 @@ function Section({ title, stats, playerId }) {
                   const opScore = isLeft ? m.rightScore : m.leftScore;
                   const opponentId = isLeft ? m.rightPlayerId : m.leftPlayerId;
                   const opponent = getP(opponentId);
+                  const handicapLabel = m.isHandicap ? "是" : "否";
+                  const handicapGiver = m.isHandicap
+                    ? (getP(m.handicapGiverId)?.name ?? "Unknown")
+                    : "-";
 
                   // 老平局数据 winnerId 可能为 null：显示 —
                   const result = !m.winnerId ? "—" : m.winnerId === playerId ? "Win" : "Loss";
@@ -123,6 +129,8 @@ function Section({ title, stats, playerId }) {
                       <td>
                         {meScore} : {opScore}
                       </td>
+                      <td>{handicapLabel}</td>
+                      <td>{handicapGiver}</td>
                       <td style={{ fontWeight: 950 }}>{result}</td>
                     </tr>
                   );

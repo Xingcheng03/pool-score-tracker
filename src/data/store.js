@@ -505,7 +505,7 @@ export function exportLeaderboardToJSON(opts = {}) {
     // 可选：把你“0.5 放门规则”的说明也塞进去，方便别人看 JSON 就懂
     notes: {
       handicapRule:
-        "放门统计仍按半场口径：若 isHandicap=true 且 handicapReceiverId 获胜，则该场按 0.5 场折算局数与场次；否则按 1.0 场。",
+        "放门统计按标签折算：若 isHandicap=true 且 handicapReceiverId 获胜，则练习赛按 0.5 场、直播按 0.75 场折算局数与场次；否则按 1.0 场。",
       ratingRule:
         "Rating 约等于 K*(actualRackWR-expectedRackWR)*matchWeight*robustness。练习赛基准权重=1.0，直播=1.5；放门不套用强弱分档，若被放门方获胜则 Rating 权重按对应标签减半（练习0.5，直播0.75）。非放门强弱分档：练习<5=1.0，5-9=0.8/1.2，10-14=0.6/1.4，>=15=0.4/1.6；直播<5=1.5，5-9=1.3/1.7，10-14=1.1/1.9，>=15=0.9/2.1。",
     },
@@ -616,7 +616,7 @@ export async function exportLeaderboardToExcel(opts = {}) {
   // 备注 sheet：把规则说明写进去（你说要给别人展示完整步骤，这个很加分）
   const note = wb.addWorksheet("计分规则");
   note.columns = [{ width: 120 }];
-  addTitleRow(note, "积分计算规则（Fargo-lite + 放门半场）");
+  addTitleRow(note, "积分计算规则（Fargo-lite + 放门折算）");
 
   note.addRow([
     "1) Rating 初始值：每位球员初始 Rating = 500。",
@@ -652,7 +652,7 @@ export async function exportLeaderboardToExcel(opts = {}) {
     "11) 单场 Rating 更新（A 为 left，B 为 right）：delta = K*(ActualA-ExpectedA)*matchWeight；A += delta*robustA，B -= delta*robustB。K=40。",
   ]);
   note.addRow([
-    "12) 积分榜局胜率统计：局数与赢局数仍按放门 0.5 规则折算，确保排行榜统计口径一致。",
+    "12) 积分榜局胜率统计：局数、赢局数与折算场次按同一放门规则折算，练习赛为 0.5，直播为 0.75。",
   ]);
 
   const buf = await wb.xlsx.writeBuffer();
@@ -774,20 +774,19 @@ export function getMatchesForPlayer(playerId, tag = "all", _matchesOverride = nu
   return filtered;
 }
 
-function applyHandicapWinRateAdjustment(match, playerId, adjusted) {
-  if (!match?.isHandicap) return;
-  if (!match?.winnerId) return;
+function handicapStatsFactor(match, playerId) {
+  if (!match?.isHandicap) return 1;
+  if (!match?.winnerId) return 1;
 
   const giverId = match.handicapGiverId;
   const receiverId = match.handicapReceiverId;
-
-  if (!giverId || !receiverId) return;
+  if (!giverId || !receiverId) return 1;
 
   const receiverWon = match.winnerId === receiverId;
-  if (!receiverWon) return;
+  if (!receiverWon) return 1;
 
-  if (playerId === giverId) adjusted.losses -= 0.5;
-  else if (playerId === receiverId) adjusted.wins -= 0.5;
+  if (playerId !== giverId && playerId !== receiverId) return 1;
+  return match.tag === "live" ? 0.75 : 0.5;
 }
 
 export function calcPlayerStats(playerId, opts = {}) {
@@ -808,24 +807,19 @@ export function calcPlayerStats(playerId, opts = {}) {
 
     if (!m.winnerId) continue;
 
+    const factor = handicapStatsFactor(m, playerId);
+
     if (m.winnerId === playerId) {
-      wins += 1;
-      beaten.set(opponentId, (beaten.get(opponentId) || 0) + 1);
+      wins += factor;
+      beaten.set(opponentId, (beaten.get(opponentId) || 0) + factor);
     } else {
-      losses += 1;
-      lostTo.set(opponentId, (lostTo.get(opponentId) || 0) + 1);
+      losses += factor;
+      lostTo.set(opponentId, (lostTo.get(opponentId) || 0) + factor);
     }
   }
 
   const total = wins + losses;
-
-  const adjusted = { wins, losses };
-  for (const m of matches) {
-    applyHandicapWinRateAdjustment(m, playerId, adjusted);
-  }
-
-  const denom = adjusted.wins + adjusted.losses;
-  const winRate = denom > 0 ? adjusted.wins / denom : 0;
+  const winRate = total > 0 ? wins / total : 0;
 
   const toSortedList = (map) =>
     [...map.entries()]
@@ -907,20 +901,7 @@ export function buildFargoLiteLeaderboard(opts = {}) {
 
 
 function handicapHalfFactor(match, playerId) {
-  // 只有“被放门方赢”才折算半场
-  if (!match?.isHandicap) return 1;
-  if (!match?.winnerId) return 1;
-
-  const giverId = match.handicapGiverId;
-  const receiverId = match.handicapReceiverId;
-  if (!giverId || !receiverId) return 1;
-
-  const receiverWon = match.winnerId === receiverId;
-  if (!receiverWon) return 1;
-
-  // 这场对双方都只算“半场”
-  if (playerId === giverId || playerId === receiverId) return 0.5;
-  return 1;
+  return handicapStatsFactor(match, playerId);
 }
 
 function normalizeMode(mode) {
@@ -955,9 +936,9 @@ function calcRackStatsForPlayerHalf(playerId, matchesAll, mode) {
     const total = my + opp;
     if (total <= 0) continue;
 
-    const f = handicapHalfFactor(match, playerId); // 1 或 0.5
+    const f = handicapHalfFactor(match, playerId); // 1 / 0.75 / 0.5
 
-    // “局”层面也按半场权重计入（使局胜率和你旧胜率规则一致）
+    // Racks and effective matches use the same handicap-adjusted stats factor.
     racks += total * f;
     won += my * f;
 
