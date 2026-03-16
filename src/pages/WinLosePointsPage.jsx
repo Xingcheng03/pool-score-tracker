@@ -1,5 +1,6 @@
 ﻿import React, { useMemo, useState } from "react";
 import { getMatches, getPlayers } from "../data/store.js";
+import { INTERNAL_POINTS_NAME } from "../constants/labels.js";
 
 const BASE_POINTS = 1000;
 const WIN_POINTS = 20;
@@ -153,7 +154,7 @@ export default function WinLosePointsPage() {
     <div>
       <div className="pageTitle">
         <div>
-          <h2 style={{ margin: 0 }}>胜负积分榜（非 Fargo）</h2>
+          <h2 style={{ margin: 0 }}>胜负积分榜（非{INTERNAL_POINTS_NAME}）</h2>
           <div style={{ color: "var(--muted)", fontSize: 13, marginTop: 6 }}>
             全部比赛按日期顺序结算：胜 +{WIN_POINTS}，负 -{LOSE_POINTS}，连胜/连败每满 3 场额外 ±{STREAK_BONUS}
           </div>

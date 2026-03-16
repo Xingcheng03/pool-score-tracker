@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
+import { INTERNAL_POINTS_NAME } from "../constants/labels.js";
 
 const STORAGE_KEY = "pool_tracker_v1";
 
@@ -616,7 +617,7 @@ export async function exportLeaderboardToExcel(opts = {}) {
   // 备注 sheet：把规则说明写进去（你说要给别人展示完整步骤，这个很加分）
   const note = wb.addWorksheet("计分规则");
   note.columns = [{ width: 120 }];
-  addTitleRow(note, "积分计算规则（Fargo-lite + 放门折算）");
+  addTitleRow(note, `积分计算规则（${INTERNAL_POINTS_NAME} + 放门折算）`);
 
   note.addRow([
     "1) Rating 初始值：每位球员初始 Rating = 500。",

@@ -8,6 +8,7 @@ import {
   getPlayers,
   getMatches,
 } from "../data/store.js";
+import { INTERNAL_POINTS_NAME } from "../constants/labels.js";
 
 export default function LeaderboardPage() {
   const [q, setQ] = useState("");
@@ -173,7 +174,7 @@ export default function LeaderboardPage() {
         <div>
           <h2 style={{ margin: 0 }}>球员积分榜</h2>
           <div style={{ color: "var(--muted)", fontSize: 13, marginTop: 6 }}>
-            简化 Fargo：按“局胜率 + 对手强度”计算 Rating（直播权重大于练习）
+            {INTERNAL_POINTS_NAME}：按“局胜率 + 对手强度”计算 Rating（直播权重大于练习）
           </div>
         </div>
       </div>
@@ -361,7 +362,7 @@ export default function LeaderboardPage() {
 
       <div className="leaderboardInfoGrid">
         <div className="card leaderboardRulesCard">
-          <div className="leaderboardRulesTitle">积分计算规则说明（Fargo-lite）</div>
+          <div className="leaderboardRulesTitle">积分计算规则说明（{INTERNAL_POINTS_NAME}）</div>
           <div style={{ marginBottom: 8 }}>
             <b>1. 基本思想</b><br />
             每位球员都有一个初始 Rating（500）。系统按比赛时间顺序，逐场比较

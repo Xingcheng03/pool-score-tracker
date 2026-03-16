@@ -1,5 +1,6 @@
 ﻿import React from "react";
 import { NavLink } from "react-router-dom";
+import { INTERNAL_POINTS_NAME } from "../constants/labels.js";
 
 export default function Navbar() {
   const linkClass = ({ isActive }) => (isActive ? "pill pillActive" : "pill");
@@ -23,7 +24,7 @@ export default function Navbar() {
             新建比赛
           </NavLink>
           <NavLink to="/leaderboard" className={linkClass}>
-            Fargo 积分榜
+            {INTERNAL_POINTS_NAME}
           </NavLink>
           <NavLink to="/win-lose-points" className={linkClass}>
             胜负积分榜

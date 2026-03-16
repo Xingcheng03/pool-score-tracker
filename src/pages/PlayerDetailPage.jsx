@@ -6,6 +6,7 @@ import {
   getPlayerFargoRatingHistory,
   getPlayers,
 } from "../data/store.js";
+import { INTERNAL_POINTS_NAME } from "../constants/labels.js";
 
 function formatCount(value) {
   if (!Number.isFinite(value)) return "0";
@@ -117,9 +118,9 @@ function FargoHistoryChart({ history, playerMap }) {
     <section className="card playerFargoCard">
       <div className="playerFargoHead">
         <div>
-          <div className="badge">全部比赛 Fargo Rating 历史走势</div>
+          <div className="badge">全部比赛{INTERNAL_POINTS_NAME}历史走势</div>
           <p className="playerFargoSub">
-            按全部比赛时间顺序回放，练习赛和直播都会共同影响这条 Rating 曲线，虚线表示起始 500 基线。
+            按全部比赛时间顺序回放，练习赛和直播都会共同影响这条积分曲线，虚线表示起始 500 基线。
           </p>
         </div>
 
@@ -155,7 +156,7 @@ function FargoHistoryChart({ history, playerMap }) {
 
       {points.length === 0 ? (
         <div className="playerFargoEmpty">
-          暂无 Fargo Rating 历史数据。先录入这位球员的比赛后，这里会自动生成全部比赛的 Rating 曲线。
+          暂无{INTERNAL_POINTS_NAME}历史数据。先录入这位球员的比赛后，这里会自动生成全部比赛的积分曲线。
         </div>
       ) : (
         <div className="playerFargoCanvas" ref={canvasRef} onMouseLeave={() => setTooltip(null)}>
@@ -163,7 +164,7 @@ function FargoHistoryChart({ history, playerMap }) {
             className="playerFargoSvg"
             viewBox={`0 0 ${chart.width} ${chart.height}`}
             role="img"
-            aria-label="全部比赛 Fargo Rating 历史走势"
+            aria-label={`全部比赛${INTERNAL_POINTS_NAME}历史走势`}
           >
             {chart.axisRows.map(({ value, y }) => {
               return (
@@ -254,7 +255,7 @@ function FargoHistoryChart({ history, playerMap }) {
               <div className="playerFargoTooltipDate">{formatDate(tooltip.point.dateISO)}</div>
               <div className="playerFargoTooltipMetrics">
                 <div className="playerFargoTooltipMetric">
-                  <span>Fargo</span>
+                  <span>{INTERNAL_POINTS_NAME}</span>
                   <strong>{formatRating(tooltip.point.rating)}</strong>
                 </div>
                 <div className="playerFargoTooltipMetric">
