@@ -1103,16 +1103,19 @@ function tierFromRating(r) {
   return "大匕首";
 }
 
-function computeRatingsFargoLiteHalf(players, matches) {
-  const rating = new Map(players.map((p) => [p.id, 500]));
-  const played = new Map(players.map((p) => [p.id, 0])); // 真实参与场次（不折算），用于稳健
-
-  // Tie-break by id so recalculation remains deterministic when dateISO is equal.
-  const sorted = [...matches].sort((a, b) => {
+function sortMatchesForRatingReplay(matches) {
+  return [...matches].sort((a, b) => {
     const dt = new Date(a.dateISO).getTime() - new Date(b.dateISO).getTime();
     if (dt !== 0) return dt;
     return String(a.id ?? "").localeCompare(String(b.id ?? ""));
   });
+}
+
+function runFargoLiteRatings(players, matches, onMatchApplied) {
+  const rating = new Map(players.map((p) => [p.id, 500]));
+  const played = new Map(players.map((p) => [p.id, 0])); // 真实参与场次（不折算），用于稳健
+
+  const sorted = sortMatchesForRatingReplay(matches);
 
   const K = 40;
   const D = 200;
@@ -1195,13 +1198,85 @@ function computeRatingsFargoLiteHalf(players, matches) {
     }
 
     const delta = K * (actualA - expectedA) * matchWeight;
+    const nextRa = Ra + delta * robustA;
+    const nextRb = Rb - delta * robustB;
 
-    rating.set(A, Ra + delta * robustA);
-    rating.set(B, Rb - delta * robustB);
+    rating.set(A, nextRa);
+    rating.set(B, nextRb);
 
     played.set(A, pa + 1);
     played.set(B, pb + 1);
+
+    onMatchApplied?.({
+      match: m,
+      leftPlayerId: A,
+      rightPlayerId: B,
+      leftRatingBefore: Ra,
+      rightRatingBefore: Rb,
+      leftRatingAfter: nextRa,
+      rightRatingAfter: nextRb,
+      leftPlayedAfter: pa + 1,
+      rightPlayedAfter: pb + 1,
+    });
   }
 
   return { rating, played };
+}
+
+function computeRatingsFargoLiteHalf(players, matches) {
+  return runFargoLiteRatings(players, matches);
+}
+
+export function getPlayerFargoRatingHistory(playerId, opts = {}) {
+  const players = Array.isArray(opts?._players) ? opts._players : getPlayers();
+  const matches = Array.isArray(opts?._matches) ? opts._matches : getMatches("all");
+
+  if (!players.some((player) => player.id === playerId)) {
+    return {
+      playerId,
+      startRating: 500,
+      currentRating: 500,
+      netChange: 0,
+      highestRating: 500,
+      lowestRating: 500,
+      points: [],
+    };
+  }
+
+  const points = [];
+  let previousRating = 500;
+
+  runFargoLiteRatings(players, matches, ({ match, leftPlayerId, rightPlayerId, leftRatingAfter, rightRatingAfter }) => {
+    if (leftPlayerId !== playerId && rightPlayerId !== playerId) return;
+
+    const isLeft = leftPlayerId === playerId;
+    const rating = isLeft ? leftRatingAfter : rightRatingAfter;
+    const opponentId = isLeft ? rightPlayerId : leftPlayerId;
+    const delta = rating - previousRating;
+
+    points.push({
+      matchId: match.id,
+      dateISO: match.dateISO,
+      matchName: match.matchName ?? "未命名比赛",
+      tag: normalizeTag(match.tag),
+      opponentId,
+      rating,
+      delta,
+    });
+
+    previousRating = rating;
+  });
+
+  const values = [500, ...points.map((point) => point.rating)];
+  const currentRating = points.length > 0 ? points[points.length - 1].rating : 500;
+
+  return {
+    playerId,
+    startRating: 500,
+    currentRating,
+    netChange: currentRating - 500,
+    highestRating: Math.max(...values),
+    lowestRating: Math.min(...values),
+    points,
+  };
 }

@@ -112,6 +112,52 @@ export default function LeaderboardPage() {
     }
     return undefined;
   };
+  const weightGuideSections = [
+    {
+      key: "practice-standard",
+      title: "非放门 · 练习赛",
+      tone: "practice",
+      badge: "基准 1.0",
+      rows: [
+        { label: "排名差 < 5 名", value: "1.00" },
+        { label: "排名差 5-9 名", value: "高排赢 0.80 / 爆冷 1.20" },
+        { label: "排名差 10-14 名", value: "高排赢 0.60 / 爆冷 1.40" },
+        { label: "排名差 ≥ 15 名", value: "高排赢 0.40 / 爆冷 1.60" },
+      ],
+    },
+    {
+      key: "live-standard",
+      title: "非放门 · 直播",
+      tone: "live",
+      badge: "基准 1.5",
+      rows: [
+        { label: "排名差 < 5 名", value: "1.50" },
+        { label: "排名差 5-9 名", value: "高排赢 1.30 / 爆冷 1.70" },
+        { label: "排名差 10-14 名", value: "高排赢 1.10 / 爆冷 1.90" },
+        { label: "排名差 ≥ 15 名", value: "高排赢 0.90 / 爆冷 2.10" },
+      ],
+    },
+    {
+      key: "practice-handicap",
+      title: "放门 · 练习赛",
+      tone: "handicap",
+      badge: "不看排名差",
+      rows: [
+        { label: "放门方赢", value: "1.00" },
+        { label: "被放门方赢", value: "0.50" },
+      ],
+    },
+    {
+      key: "live-handicap",
+      title: "放门 · 直播",
+      tone: "handicap",
+      badge: "不看排名差",
+      rows: [
+        { label: "放门方赢", value: "1.50" },
+        { label: "被放门方赢", value: "0.75" },
+      ],
+    },
+  ];
 
   function toggleSort(k) {
     if (sortKey === k) setSortDir(sortDir === "asc" ? "desc" : "asc");
@@ -313,86 +359,115 @@ export default function LeaderboardPage() {
         </div>
       </div>
 
-      <div
-        className="card"
-        style={{
-          marginTop: 16,
-          fontSize: 13,
-          lineHeight: 1.7,
-          color: "var(--muted)",
-        }}
-      >
-        <div style={{ fontWeight: 900, marginBottom: 6, color: "var(--text)" }}>
-          积分计算规则说明（Fargo-lite）
-        </div>
-        <div style={{ marginBottom: 8 }}>
-          <b>1. 基本思想</b><br />
-          每位球员都有一个初始 Rating（500）。系统按比赛时间顺序，逐场比较
-          「<b>实际局胜率</b>」与「<b>基于对手强度的预期局胜率</b>」，根据差异对
-          Rating 进行增减。
+      <div className="leaderboardInfoGrid">
+        <div className="card leaderboardRulesCard">
+          <div className="leaderboardRulesTitle">积分计算规则说明（Fargo-lite）</div>
+          <div style={{ marginBottom: 8 }}>
+            <b>1. 基本思想</b><br />
+            每位球员都有一个初始 Rating（500）。系统按比赛时间顺序，逐场比较
+            「<b>实际局胜率</b>」与「<b>基于对手强度的预期局胜率</b>」，根据差异对
+            Rating 进行增减。
+          </div>
+
+          <div style={{ marginBottom: 8 }}>
+            <b>2. 实际局胜率（Actual）</b><br />
+            实际局胜率 = 本场赢的局数 ÷ 本场总局数。<br />
+            例如：7 : 5 → 实际局胜率 = 7 / 12。
+          </div>
+
+          <div style={{ marginBottom: 8 }}>
+            <b>3. 预期局胜率（Expected）</b><br />
+            由双方当前 Rating 计算，Rating 越高的一方，系统预期其局胜率越高。
+            若你击败了比你更强的对手，得到的加分会更多；反之亦然。
+          </div>
+
+          <div style={{ marginBottom: 8 }}>
+            <b>4. 强弱对阵规则（文字说明）</b><br />
+            若双方排名差距小于 5 名（例如只差 2-3 名），按正常逻辑结算，不做额外加权。<br />
+            只有排名差距达到分档时才启用加权：差 5 名一档、差 10 名一档、差 15 名一档。<br />
+            在这些分档中，若高排名选手赢，积分变化会缩小（高分少加、低分少扣）；
+            若低排名选手爆冷赢，积分变化会放大（低分多加、高分多扣）。<br />
+            注意：放门比赛不套用这条强弱对阵分档规则。
+          </div>
+
+          <div style={{ marginBottom: 8 }}>
+            <b>5. 比赛标签权重</b><br />
+            练习赛基准权重为 1.0，直播比赛基准权重为 1.5。<br />
+            同样的表现，在直播比赛中的积分变化幅度更大。
+          </div>
+
+          <div style={{ marginBottom: 8 }}>
+            <b>6. 放门（让分）规则</b><br />
+            放门比赛不套用强弱对阵分档，直接按标签基准权重结算 Rating：<br />
+            • 练习赛：放门方赢 = 1.0；被放门方赢 = 0.5<br />
+            • 直播：放门方赢 = 1.5；被放门方赢 = 0.75<br />
+            局胜率与折算场次统计也按标签折算：练习赛按 0.5 场，直播按 0.75 场。
+          </div>
+
+          <div style={{ marginBottom: 8 }}>
+            <b>7. 稳定系数（场次越多越稳定）</b><br />
+            球员参与的比赛场次越多，单场比赛对 Rating 的影响越小，
+            用于防止早期少量比赛造成积分剧烈波动。
+          </div>
+
+          <div style={{ marginBottom: 8 }}>
+            <b>8. Rating 更新方式（简化表达）</b><br />
+            Rating 变化 ≈ K ×（实际局胜率 − 预期局胜率）× 综合权重 × 稳定系数。<br />
+            非放门比赛的综合权重规则：<br />
+            • 练习赛：差距 &lt; 5 名 = 1.00；[5,10) = 高排赢 0.80 / 低排爆冷赢 1.20；[10,15) = 0.60 / 1.40；≥ 15 = 0.40 / 1.60<br />
+            • 直播：差距 &lt; 5 名 = 1.50；[5,10) = 高排赢 1.30 / 低排爆冷赢 1.70；[10,15) = 1.10 / 1.90；≥ 15 = 0.90 / 2.10
+          </div>
+
+          <div style={{ marginBottom: 8 }}>
+            <b>9. 局胜率与可信度</b><br />
+            表格中的局胜率、直播局胜率、练习局胜率，均基于局数统计，
+            并与放门折算规则保持一致：练习赛为 0.5，直播为 0.75。<br />
+            比赛（折算后）场次越多，可信度越高，排名越可靠。
+          </div>
+
+          <div>
+            <b>10. 最近 10 场趋势</b><br />
+            用最近 10 场比赛的比分差近似表示当前状态，仅用于趋势展示，
+            不直接参与 Rating 计算。
+          </div>
         </div>
 
-        <div style={{ marginBottom: 8 }}>
-          <b>2. 实际局胜率（Actual）</b><br />
-          实际局胜率 = 本场赢的局数 ÷ 本场总局数。<br />
-          例如：7 : 5 → 实际局胜率 = 7 / 12。
-        </div>
+        <aside className="card leaderboardWeightCard">
+          <div className="leaderboardWeightTitleWrap">
+            <div className="badge">仅看权重</div>
+            <div className="leaderboardWeightTitle">现在所有比赛类型的加分权重</div>
+            <div className="leaderboardWeightSub">
+              这里只列最终的 <b>matchWeight</b>。同样的表现下，权重越大，Rating 加减分幅度越大。
+            </div>
+          </div>
 
-        <div style={{ marginBottom: 8 }}>
-          <b>3. 预期局胜率（Expected）</b><br />
-          由双方当前 Rating 计算，Rating 越高的一方，系统预期其局胜率越高。
-          若你击败了比你更强的对手，得到的加分会更多；反之亦然。
-        </div>
+          <div className="leaderboardWeightSections">
+            {weightGuideSections.map((section) => (
+              <section
+                key={section.key}
+                className={`leaderboardWeightSection leaderboardWeightSection-${section.tone}`}
+              >
+                <div className="leaderboardWeightSectionHead">
+                  <div className="leaderboardWeightSectionTitle">{section.title}</div>
+                  <div className="leaderboardWeightSectionBadge">{section.badge}</div>
+                </div>
 
-        <div style={{ marginBottom: 8 }}>
-          <b>4. 强弱对阵规则（文字说明）</b><br />
-          若双方排名差距小于 5 名（例如只差 2-3 名），按正常逻辑结算，不做额外加权。<br />
-          只有排名差距达到分档时才启用加权：差 5 名一档、差 10 名一档、差 15 名一档。<br />
-          在这些分档中，若高排名选手赢，积分变化会缩小（高分少加、低分少扣）；
-          若低排名选手爆冷赢，积分变化会放大（低分多加、高分多扣）。<br />
-          注意：放门比赛不套用这条强弱对阵分档规则。
-        </div>
+                <div className="leaderboardWeightRows">
+                  {section.rows.map((row) => (
+                    <div key={`${section.key}-${row.label}`} className="leaderboardWeightRow">
+                      <span>{row.label}</span>
+                      <strong>{row.value}</strong>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
 
-        <div style={{ marginBottom: 8 }}>
-          <b>5. 比赛标签权重</b><br />
-          练习赛基准权重为 1.0，直播比赛基准权重为 1.5。<br />
-          同样的表现，在直播比赛中的积分变化幅度更大。
-        </div>
-
-        <div style={{ marginBottom: 8 }}>
-          <b>6. 放门（让分）规则</b><br />
-          放门比赛不套用强弱对阵分档，直接按标签基准权重结算 Rating：<br />
-          • 练习赛：放门方赢 = 1.0；被放门方赢 = 0.5<br />
-          • 直播：放门方赢 = 1.5；被放门方赢 = 0.75<br />
-          局胜率与折算场次统计也按标签折算：练习赛按 0.5 场，直播按 0.75 场。
-        </div>
-
-        <div style={{ marginBottom: 8 }}>
-          <b>7. 稳定系数（场次越多越稳定）</b><br />
-          球员参与的比赛场次越多，单场比赛对 Rating 的影响越小，
-          用于防止早期少量比赛造成积分剧烈波动。
-        </div>
-
-        <div style={{ marginBottom: 8 }}>
-          <b>8. Rating 更新方式（简化表达）</b><br />
-          Rating 变化 ≈ K ×（实际局胜率 − 预期局胜率）× 综合权重 × 稳定系数。<br />
-          非放门比赛的综合权重规则：<br />
-          • 练习赛：差距 &lt; 5 名 = 1.00；[5,10) = 高排赢 0.80 / 低排爆冷赢 1.20；[10,15) = 0.60 / 1.40；≥ 15 = 0.40 / 1.60<br />
-          • 直播：差距 &lt; 5 名 = 1.50；[5,10) = 高排赢 1.30 / 低排爆冷赢 1.70；[10,15) = 1.10 / 1.90；≥ 15 = 0.90 / 2.10
-        </div>
-
-        <div style={{ marginBottom: 8 }}>
-          <b>9. 局胜率与可信度</b><br />
-          表格中的局胜率、直播局胜率、练习局胜率，均基于局数统计，
-          并与放门折算规则保持一致：练习赛为 0.5，直播为 0.75。<br />
-          比赛（折算后）场次越多，可信度越高，排名越可靠。
-        </div>
-
-        <div>
-          <b>10. 最近 10 场趋势</b><br />
-          用最近 10 场比赛的比分差近似表示当前状态，仅用于趋势展示，
-          不直接参与 Rating 计算。
-        </div>
+          <div className="leaderboardWeightFootnote">
+            注：非放门比赛会按当前排行榜名次差距分档；放门比赛不套用强弱分档，直接按标签权重结算。
+          </div>
+        </aside>
       </div>
 
     </div>

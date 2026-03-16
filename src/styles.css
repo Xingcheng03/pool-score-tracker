@@ -402,6 +402,146 @@ select:focus {
   padding: 8px 10px;
 }
 
+.leaderboardInfoGrid {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.leaderboardRulesCard {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.leaderboardRulesTitle {
+  font-weight: 900;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+
+.leaderboardWeightCard {
+  border: 1px solid rgba(37, 99, 235, 0.14);
+  background:
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.1), transparent 36%),
+    linear-gradient(180deg, rgba(248, 250, 252, 0.98), #ffffff 46%);
+  padding: 16px;
+}
+
+.leaderboardWeightTitleWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.leaderboardWeightTitle {
+  font-size: 20px;
+  line-height: 1.25;
+  font-weight: 950;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.leaderboardWeightSub {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.leaderboardWeightSections {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.leaderboardWeightSection {
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.92);
+  padding: 12px 14px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+}
+
+.leaderboardWeightSection-practice {
+  border-color: rgba(37, 99, 235, 0.18);
+}
+
+.leaderboardWeightSection-live {
+  border-color: rgba(245, 158, 11, 0.28);
+}
+
+.leaderboardWeightSection-handicap {
+  border-color: rgba(225, 29, 72, 0.18);
+}
+
+.leaderboardWeightSectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.leaderboardWeightSectionTitle {
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--text);
+}
+
+.leaderboardWeightSectionBadge {
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: var(--soft);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.leaderboardWeightRows {
+  display: grid;
+  gap: 4px;
+}
+
+.leaderboardWeightRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 0;
+  border-bottom: 1px dashed rgba(148, 163, 184, 0.26);
+}
+
+.leaderboardWeightRow:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.leaderboardWeightRow span {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.leaderboardWeightRow strong {
+  font-size: 13px;
+  line-height: 1.3;
+  font-weight: 900;
+  color: var(--text);
+  text-align: right;
+}
+
+.leaderboardWeightFootnote {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(148, 163, 184, 0.24);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -434,6 +574,154 @@ tbody tr:hover td {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
+}
+
+.playerFargoCard {
+  margin-top: 12px;
+}
+
+.playerFargoHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.playerFargoSub {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.playerFargoMeta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.playerFargoStat {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  box-shadow: var(--shadow);
+}
+
+.playerFargoStatLabel {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.playerFargoStatValue {
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.playerFargoStatValue.isUp {
+  color: var(--primary);
+}
+
+.playerFargoStatValue.isDown {
+  color: var(--danger);
+}
+
+.playerFargoCanvas {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 12px;
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 34%),
+    linear-gradient(180deg, rgba(248, 250, 252, 0.92), #ffffff);
+  overflow: hidden;
+}
+
+.playerFargoSvg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.playerFargoEmpty {
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.playerFargoTooltip {
+  position: absolute;
+  z-index: 3;
+  width: 248px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  background: rgba(15, 23, 42, 0.94);
+  color: #ffffff;
+  box-shadow: 0 18px 34px rgba(15, 23, 42, 0.24);
+  pointer-events: none;
+}
+
+.playerFargoTooltipDate {
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgba(226, 232, 240, 0.86);
+}
+
+.playerFargoTooltipMetrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.playerFargoTooltipMetric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.playerFargoTooltipMetric span {
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(226, 232, 240, 0.76);
+}
+
+.playerFargoTooltipMetric strong {
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 950;
+  color: #ffffff;
+}
+
+.playerFargoTooltipMetric strong.isUp {
+  color: #60a5fa;
+}
+
+.playerFargoTooltipMetric strong.isDown {
+  color: #fb7185;
+}
+
+.playerFargoTooltipInfo {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(226, 232, 240, 0.9);
+}
+
+.playerFargoTooltipMatch {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: rgba(248, 250, 252, 0.92);
 }
 
 .playerDetailSection {
@@ -614,6 +902,18 @@ tbody tr:hover td {
   }
   .leaderboardTableCard {
     order: 2;
+  }
+
+  .leaderboardInfoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .playerFargoMeta {
+    justify-content: flex-start;
+  }
+
+  .playerFargoStatValue {
+    font-size: 18px;
   }
 
   .playerDetailSplit {
