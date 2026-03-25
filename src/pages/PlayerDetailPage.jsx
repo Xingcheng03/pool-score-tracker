@@ -48,6 +48,410 @@ function SummaryCard({ label, value }) {
   );
 }
 
+const MAX_TURNING_POINTS = 12;
+const TURNING_POINT_FONT_SIZE = 7.4;
+const TURNING_POINT_LINE_HEIGHT = 9;
+const TURNING_POINT_CHAR_WIDTH = 4.6;
+const TURNING_POINT_LABEL_MIN_WIDTH = 34;
+const TURNING_POINT_LABEL_MAX_WIDTH = 104;
+const TURNING_POINT_LABEL_GAP = 16;
+const TURNING_POINT_MIN_CONNECTOR = 14;
+const TURNING_POINT_CONNECTOR_OFFSET = 3;
+
+function clampNumber(value, min, max) {
+  if (min > max) return min;
+  return Math.min(Math.max(value, min), max);
+}
+
+function truncateLabelText(value, maxLength = 6) {
+  const text = String(value ?? "").trim();
+  if (!text) return "Unknown";
+  return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+}
+
+function estimateLabelUnits(value) {
+  return [...String(value ?? "")].reduce((total, char) => {
+    return total + (/[\u3400-\u9fff]/.test(char) ? 1.8 : 1);
+  }, 0);
+}
+
+function detectTurningPointIndexes(points, threshold) {
+  if (points.length === 0) return [];
+  if (points.length === 1) return [0];
+
+  const indexes = [0];
+  let trend = 0;
+  let pivotIndex = 0;
+  let extremeIndex = 0;
+  let highIndex = 0;
+  let lowIndex = 0;
+
+  for (let index = 1; index < points.length; index += 1) {
+    const rating = points[index].rating;
+
+    if (rating >= points[highIndex].rating) highIndex = index;
+    if (rating <= points[lowIndex].rating) lowIndex = index;
+
+    if (trend === 0) {
+      if (points[pivotIndex].rating - points[lowIndex].rating >= threshold) {
+        trend = -1;
+        extremeIndex = lowIndex;
+        highIndex = pivotIndex;
+        continue;
+      }
+
+      if (points[highIndex].rating - points[pivotIndex].rating >= threshold) {
+        trend = 1;
+        extremeIndex = highIndex;
+        lowIndex = pivotIndex;
+      }
+      continue;
+    }
+
+    const extremeRating = points[extremeIndex].rating;
+
+    if (trend > 0) {
+      if (rating >= extremeRating) {
+        extremeIndex = index;
+        continue;
+      }
+
+      if (extremeRating - rating >= threshold) {
+        if (extremeIndex !== indexes[indexes.length - 1]) indexes.push(extremeIndex);
+        pivotIndex = extremeIndex;
+        trend = -1;
+        extremeIndex = index;
+      }
+      continue;
+    }
+
+    if (rating <= extremeRating) {
+      extremeIndex = index;
+      continue;
+    }
+
+    if (rating - extremeRating >= threshold) {
+      if (extremeIndex !== indexes[indexes.length - 1]) indexes.push(extremeIndex);
+      pivotIndex = extremeIndex;
+      trend = 1;
+      extremeIndex = index;
+    }
+  }
+
+  if (extremeIndex !== indexes[indexes.length - 1]) indexes.push(extremeIndex);
+  if (indexes[indexes.length - 1] !== points.length - 1) indexes.push(points.length - 1);
+
+  return [...new Set(indexes)].sort((a, b) => a - b);
+}
+
+function buildTurningPointIndexes(points) {
+  if (points.length <= 2) return points.map((_, index) => index);
+
+  const ratings = points.map((point) => point.rating);
+  const span = Math.max(...ratings) - Math.min(...ratings);
+  let threshold = Math.max(4, Math.min(10, span * 0.16 || 4));
+  let indexes = detectTurningPointIndexes(points, threshold);
+
+  while (indexes.length > MAX_TURNING_POINTS && threshold < span + 2) {
+    threshold += 0.75;
+    indexes = detectTurningPointIndexes(points, threshold);
+  }
+
+  return indexes;
+}
+
+function getTurningPointKind(points, turningIndexes, order) {
+  const currentIndex = turningIndexes[order];
+  const currentRating = points[currentIndex].rating;
+  const previousRating = order > 0 ? points[turningIndexes[order - 1]].rating : null;
+  const nextRating =
+    order < turningIndexes.length - 1 ? points[turningIndexes[order + 1]].rating : null;
+
+  if (previousRating == null && nextRating == null) {
+    return currentRating >= 500 ? "peak" : "trough";
+  }
+
+  if (previousRating == null) {
+    return currentRating >= nextRating ? "peak" : "trough";
+  }
+
+  if (nextRating == null) {
+    return currentRating >= previousRating ? "peak" : "trough";
+  }
+
+  return currentRating >= previousRating && currentRating >= nextRating ? "peak" : "trough";
+}
+
+function buildTurningPointLabel(point) {
+  const line1 = "涨跌趋势";
+  const stageText = formatSignedRating(point.segmentDelta);
+  const culpritLineText =
+    point.segmentDelta >= 0
+      ? `送分童子: ${point.culpritName}`
+      : `罪魁祸首: ${point.culpritName}`;
+  const culpritDeltaLineText =
+    point.segmentDelta >= 0
+      ? `贡献分数: ${formatSignedRating(point.culpritDelta)}`
+      : `掏走分数: ${formatSignedRating(point.culpritDelta)}`;
+  const width = clampNumber(
+    Math.max(
+      estimateLabelUnits(`${line1} ${stageText}`),
+      estimateLabelUnits(culpritLineText),
+      estimateLabelUnits(culpritDeltaLineText),
+    ) *
+      TURNING_POINT_CHAR_WIDTH,
+    TURNING_POINT_LABEL_MIN_WIDTH,
+    TURNING_POINT_LABEL_MAX_WIDTH,
+  );
+
+  return {
+    line1,
+    stageText,
+    culpritLineText,
+    culpritDeltaLineText,
+    width,
+    height: TURNING_POINT_LINE_HEIGHT * 3 + 4,
+  };
+}
+
+function getStageCulprit(points, startIndex, endIndex, playerMap, segmentDelta) {
+  const stagePoints = points.slice(startIndex + 1, endIndex + 1);
+  const totalsByOpponent = new Map();
+
+  stagePoints.forEach((point) => {
+    totalsByOpponent.set(
+      point.opponentId,
+      (totalsByOpponent.get(point.opponentId) ?? 0) + point.delta,
+    );
+  });
+
+  const totals = [...totalsByOpponent.entries()].map(([opponentId, total]) => ({
+    opponentId,
+    total,
+    name: truncateLabelText(playerMap.get(opponentId)?.name ?? "Unknown"),
+  }));
+
+  if (totals.length === 0) {
+    return {
+      opponentId: null,
+      name: "Unknown",
+      total: 0,
+    };
+  }
+
+  const sameDirectionTotals = totals.filter((item) =>
+    segmentDelta >= 0 ? item.total > 0 : item.total < 0,
+  );
+  const rankedTotals = sameDirectionTotals.length > 0 ? sameDirectionTotals : totals;
+  const culprit = rankedTotals.reduce((best, item) => {
+    if (!best) return item;
+
+    if (segmentDelta >= 0) {
+      if (item.total > best.total) return item;
+      if (item.total === best.total && Math.abs(item.total) > Math.abs(best.total)) return item;
+      return best;
+    }
+
+    if (item.total < best.total) return item;
+    if (item.total === best.total && Math.abs(item.total) > Math.abs(best.total)) return item;
+    return best;
+  }, null);
+
+  return {
+    opponentId: culprit.opponentId,
+    name: culprit.name,
+    total: culprit.total,
+  };
+}
+
+function getCurveEnvelope(plottedPoints, xStart, xEnd, fallbackY) {
+  const samples = plottedPoints.filter(
+    (sample) => sample.x >= xStart - 12 && sample.x <= xEnd + 12,
+  );
+
+  if (samples.length === 0) {
+    return { minY: fallbackY, maxY: fallbackY };
+  }
+
+  return {
+    minY: Math.min(...samples.map((sample) => sample.y)),
+    maxY: Math.max(...samples.map((sample) => sample.y)),
+  };
+}
+
+function getVerticalLabelCandidates(point, plottedPoints, bounds) {
+  const x = clampNumber(
+    point.x - point.labelWidth / 2,
+    bounds.minX,
+    Math.max(bounds.minX, bounds.maxX - point.labelWidth),
+  );
+  const envelope = getCurveEnvelope(plottedPoints, x, x + point.labelWidth, point.y);
+  const maxLabelY = Math.max(bounds.minY, bounds.maxY - point.labelHeight);
+  const gap = TURNING_POINT_LABEL_GAP;
+  const aboveSpace = Math.max(0, envelope.minY - bounds.minY);
+  const belowSpace = Math.max(0, bounds.maxY - envelope.maxY);
+  const aboveBaseY = clampNumber(
+    Math.min(envelope.minY, point.y) - point.labelHeight - gap,
+    bounds.minY,
+    maxLabelY,
+  );
+  const belowBaseY = clampNumber(
+    Math.max(envelope.maxY, point.y) + gap,
+    bounds.minY,
+    maxLabelY,
+  );
+  const preferAbove =
+    aboveSpace > belowSpace + 6 ||
+    (Math.abs(aboveSpace - belowSpace) <= 6 && point.kind === "peak");
+  const directions = preferAbove ? ["above", "below"] : ["below", "above"];
+  const candidates = [];
+
+  directions.forEach((direction) => {
+    const offsets = direction === "above" ? [0, -10, -20, 8] : [0, 10, 20, -8];
+    const baseY = direction === "above" ? aboveBaseY : belowBaseY;
+    const clearance = direction === "above" ? aboveSpace : belowSpace;
+
+    offsets.forEach((offset) => {
+      const y = clampNumber(baseY + offset, bounds.minY, maxLabelY);
+      const hasEnoughConnector =
+        direction === "above"
+          ? y + point.labelHeight <= point.y - TURNING_POINT_MIN_CONNECTOR
+          : y >= point.y + TURNING_POINT_MIN_CONNECTOR;
+
+      if (!hasEnoughConnector) return;
+      if (candidates.some((candidate) => candidate.direction === direction && candidate.y === y)) {
+        return;
+      }
+
+      candidates.push({
+        x,
+        y,
+        direction,
+        clearance,
+      });
+    });
+  });
+
+  return candidates;
+}
+
+function getOverlapArea(a, b, padding = 8) {
+  const left = Math.max(a.x - padding, b.x - padding);
+  const right = Math.min(a.x + a.width + padding, b.x + b.width + padding);
+  const top = Math.max(a.y - padding, b.y - padding);
+  const bottom = Math.min(a.y + a.height + padding, b.y + b.height + padding);
+
+  return Math.max(0, right - left) * Math.max(0, bottom - top);
+}
+
+function getCurvePenalty(box, plottedPoints) {
+  let penalty = 0;
+
+  plottedPoints.forEach((sample) => {
+    if (sample.x < box.x - 10 || sample.x > box.x + box.width + 10) return;
+
+    const verticalGap =
+      sample.y < box.y
+        ? box.y - sample.y
+        : sample.y > box.y + box.height
+          ? sample.y - (box.y + box.height)
+          : 0;
+
+    if (verticalGap === 0) {
+      penalty += 700;
+      return;
+    }
+
+    penalty += 48 / (verticalGap + 4);
+  });
+
+  return penalty;
+}
+
+function getAnnotationAnchor(box, point, direction) {
+  return {
+    x: clampNumber(point.x, box.x + 6, box.x + box.width - 6),
+    y:
+      direction === "above"
+        ? box.y + box.height + TURNING_POINT_CONNECTOR_OFFSET
+        : box.y - TURNING_POINT_CONNECTOR_OFFSET,
+  };
+}
+
+function buildTurningPointAnnotations(turningPoints, plottedPoints, bounds) {
+  const placements = [];
+
+  turningPoints.forEach((point) => {
+    const candidates = getVerticalLabelCandidates(point, plottedPoints, bounds);
+    if (candidates.length === 0) {
+      const fallbackDirection = point.kind === "peak" ? "above" : "below";
+      const fallbackY =
+        fallbackDirection === "above"
+          ? clampNumber(
+              point.y - point.labelHeight - TURNING_POINT_LABEL_GAP,
+              bounds.minY,
+              Math.max(bounds.minY, bounds.maxY - point.labelHeight),
+            )
+          : clampNumber(
+              point.y + TURNING_POINT_LABEL_GAP,
+              bounds.minY,
+              Math.max(bounds.minY, bounds.maxY - point.labelHeight),
+            );
+
+      candidates.push({
+        x: clampNumber(
+          point.x - point.labelWidth / 2,
+          bounds.minX,
+          Math.max(bounds.minX, bounds.maxX - point.labelWidth),
+        ),
+        y: fallbackY,
+        direction: fallbackDirection,
+        clearance: 0,
+      });
+    }
+    let bestPlacement = null;
+    let bestPenalty = Number.POSITIVE_INFINITY;
+
+    candidates.forEach((candidate) => {
+      const box = {
+        x: candidate.x,
+        y: candidate.y,
+        width: point.labelWidth,
+        height: point.labelHeight,
+      };
+
+      let penalty = getCurvePenalty(box, plottedPoints);
+      penalty -= candidate.clearance * 0.65;
+      if ((point.kind === "peak" && candidate.direction === "above") || (point.kind === "trough" && candidate.direction === "below")) {
+        penalty -= 5;
+      }
+
+      placements.forEach((placement) => {
+        const overlapArea = getOverlapArea(box, placement.box);
+        if (overlapArea > 0) penalty += 10000 + overlapArea;
+      });
+
+      if (!bestPlacement || penalty < bestPenalty) {
+        bestPlacement = {
+          box,
+          direction: candidate.direction,
+        };
+        bestPenalty = penalty;
+      }
+    });
+
+    const anchor = getAnnotationAnchor(bestPlacement.box, point, bestPlacement.direction);
+    placements.push({
+      box: bestPlacement.box,
+      direction: bestPlacement.direction,
+      anchorX: anchor.x,
+      anchorY: anchor.y,
+    });
+  });
+
+  return placements;
+}
+
 function FargoHistoryChart({ history, playerMap }) {
   const points = history.points;
   const canvasRef = useRef(null);
@@ -80,6 +484,60 @@ function FargoHistoryChart({ history, playerMap }) {
           : left + (index * plotWidth) / (points.length - 1),
       y: toY(point.rating),
     }));
+    const turningIndexes = buildTurningPointIndexes(plottedPoints);
+    const turningOrderByIndex = new Map(
+      turningIndexes.map((pointIndex, turningOrder) => [pointIndex, turningOrder]),
+    );
+    const displayTurningIndexes = turningIndexes.filter(
+      (pointIndex) => pointIndex > 0 && pointIndex < plottedPoints.length - 1,
+    );
+    const turningPointCandidates = displayTurningIndexes.map((pointIndex) => {
+      const point = plottedPoints[pointIndex];
+      const turningOrder = turningOrderByIndex.get(pointIndex) ?? -1;
+      const previousBoundaryIndex = turningOrder > 0 ? turningIndexes[turningOrder - 1] : -1;
+      const previousBoundaryPoint =
+        previousBoundaryIndex >= 0 ? plottedPoints[previousBoundaryIndex] : null;
+      const segmentDelta = point.rating - (previousBoundaryPoint?.rating ?? history.startRating);
+      const culprit = getStageCulprit(
+        plottedPoints,
+        previousBoundaryIndex,
+        pointIndex,
+        playerMap,
+        segmentDelta,
+      );
+      const kind = getTurningPointKind(plottedPoints, turningIndexes, turningOrder);
+      const label = buildTurningPointLabel({
+        ...point,
+        segmentDelta,
+        culpritName: culprit.name,
+        culpritDelta: culprit.total,
+      });
+
+      return {
+        ...point,
+        kind,
+        segmentDelta,
+        culpritId: culprit.opponentId,
+        culpritName: culprit.name,
+        culpritDelta: culprit.total,
+        labelLine1: label.line1,
+        labelStageText: label.stageText,
+        labelCulpritLineText: label.culpritLineText,
+        labelCulpritDeltaLineText: label.culpritDeltaLineText,
+        labelWidth: label.width,
+        labelHeight: label.height,
+      };
+    });
+    const annotations = buildTurningPointAnnotations(turningPointCandidates, plottedPoints, {
+      minX: left + 4,
+      maxX: width - right - 4,
+      minY: top + 4,
+      maxY: top + plotHeight - 4,
+    });
+    const turningPoints = turningPointCandidates.map((point, order) => ({
+      ...point,
+      ...annotations[order],
+    }));
 
     return {
       width,
@@ -94,8 +552,10 @@ function FargoHistoryChart({ history, playerMap }) {
       firstDate: formatShortDate(points[0].dateISO),
       lastDate: formatShortDate(points[points.length - 1].dateISO),
       plottedPoints,
+      turningPoints,
+      turningPointIds: new Set(turningPoints.map((point) => point.matchId)),
     };
-  }, [history.startRating, points]);
+  }, [history.startRating, playerMap, points]);
 
   function showTooltip(event, point) {
     const rect = canvasRef.current?.getBoundingClientRect();
@@ -104,7 +564,7 @@ function FargoHistoryChart({ history, playerMap }) {
     const localX = event.clientX - rect.left;
     const localY = event.clientY - rect.top;
     const tooltipWidth = 248;
-    const tooltipHeight = 116;
+    const tooltipHeight = 148;
     const left = Math.min(Math.max(localX + 16, 12), rect.width - tooltipWidth - 12);
     const top =
       localY < tooltipHeight + 28
@@ -208,8 +668,70 @@ function FargoHistoryChart({ history, playerMap }) {
               />
             )}
 
+            {chart.turningPoints.map((point) => {
+              const accentColor =
+                point.segmentDelta > 0
+                  ? "rgba(37, 99, 235, 0.92)"
+                  : point.segmentDelta < 0
+                    ? "rgba(244, 63, 94, 0.92)"
+                    : "rgba(71, 85, 105, 0.9)";
+              const labelCenterX = point.box.x + point.box.width / 2;
+
+              return (
+                <g key={`turning-${point.matchId}`} pointerEvents="none">
+                  <line
+                    x1={point.x}
+                    y1={point.y}
+                    x2={point.anchorX}
+                    y2={point.anchorY}
+                    stroke={accentColor}
+                    strokeWidth="1.25"
+                    strokeDasharray="3 3"
+                    opacity="0.72"
+                  />
+                  <text
+                    x={labelCenterX}
+                    y={point.box.y + TURNING_POINT_FONT_SIZE}
+                    textAnchor="middle"
+                    style={{
+                      fill: "rgba(15, 23, 42, 0.88)",
+                      fontSize: TURNING_POINT_FONT_SIZE,
+                      fontWeight: 800,
+                      paintOrder: "stroke",
+                      stroke: "rgba(255, 255, 255, 0.96)",
+                      strokeWidth: "3px",
+                      strokeLinejoin: "round",
+                    }}
+                  >
+                    <tspan x={labelCenterX} dy="0">
+                      {point.labelLine1}
+                    </tspan>
+                    <tspan fill={accentColor} fontWeight="900">
+                      {" "}{point.labelStageText}
+                    </tspan>
+                    <tspan x={labelCenterX} dy={TURNING_POINT_LINE_HEIGHT}>
+                      {point.labelCulpritLineText}
+                    </tspan>
+                    <tspan x={labelCenterX} dy={TURNING_POINT_LINE_HEIGHT} fill={accentColor} fontWeight="900">
+                      {point.labelCulpritDeltaLineText}
+                    </tspan>
+                  </text>
+                </g>
+              );
+            })}
+
             {chart.plottedPoints.map((point) => (
               <g key={point.matchId}>
+                {chart.turningPointIds.has(point.matchId) && (
+                  <circle
+                    cx={point.x}
+                    cy={point.y}
+                    r="8"
+                    fill="rgba(255,255,255,0.7)"
+                    stroke={point.delta >= 0 ? "rgba(37, 99, 235, 0.38)" : "rgba(244, 63, 94, 0.38)"}
+                    strokeWidth="2.2"
+                  />
+                )}
                 <circle
                   cx={point.x}
                   cy={point.y}
@@ -272,6 +794,9 @@ function FargoHistoryChart({ history, playerMap }) {
               <div className="playerFargoTooltipInfo">
                 {tooltip.point.tag === "live" ? "直播" : "练习赛"} · 对手{" "}
                 {playerMap.get(tooltip.point.opponentId)?.name ?? "Unknown"}
+              </div>
+              <div className="playerFargoTooltipInfo">
+                比分 {formatCount(tooltip.point.myScore)} : {formatCount(tooltip.point.opponentScore)}
               </div>
               <div className="playerFargoTooltipMatch">{tooltip.point.matchName}</div>
             </div>

@@ -1254,6 +1254,8 @@ export function getPlayerFargoRatingHistory(playerId, opts = {}) {
     const rating = isLeft ? leftRatingAfter : rightRatingAfter;
     const opponentId = isLeft ? rightPlayerId : leftPlayerId;
     const delta = rating - previousRating;
+    const myScore = isLeft ? match.leftScore : match.rightScore;
+    const opponentScore = isLeft ? match.rightScore : match.leftScore;
 
     points.push({
       matchId: match.id,
@@ -1263,6 +1265,8 @@ export function getPlayerFargoRatingHistory(playerId, opts = {}) {
       opponentId,
       rating,
       delta,
+      myScore,
+      opponentScore,
     });
 
     previousRating = rating;
