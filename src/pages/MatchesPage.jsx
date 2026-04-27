@@ -1,5 +1,17 @@
 import React, { useMemo, useState } from "react";
-import { deleteMatch, getMatches, getPlayerById, exportToJSON, importFromJSONFile, exportToExcel, tagLabel } from "../data/store.js";
+import {
+  deleteMatch,
+  getMatches,
+  getPlayerById,
+  exportToJSON,
+  importFromJSONFile,
+  exportToExcel,
+  tagLabel,
+  getAvailableSeasons,
+  filterMatchesBySeason,
+  normalizeSeasonId,
+  seasonLabel,
+} from "../data/store.js";
 import ConfirmButton from "../components/ConfirmButton.jsx";
 
 function fmtDate(iso) {
@@ -10,8 +22,16 @@ function fmtDate(iso) {
 export default function MatchesPage() {
   const [tick, setTick] = useState(0);
   const [tagFilter, setTagFilter] = useState("all");
+  const [seasonId, setSeasonId] = useState("all");
 
-  const matches = useMemo(() => getMatches(tagFilter), [tick, tagFilter]);
+  const allMatches = useMemo(() => getMatches("all"), [tick]);
+  const seasons = useMemo(() => getAvailableSeasons(allMatches), [allMatches]);
+  const normalizedSeasonId = normalizeSeasonId(seasonId);
+  const matches = useMemo(() => {
+    const seasonMatches = filterMatchesBySeason(allMatches, normalizedSeasonId);
+    if (tagFilter === "all") return seasonMatches;
+    return seasonMatches.filter((match) => match.tag === tagFilter);
+  }, [allMatches, normalizedSeasonId, tagFilter]);
 
   const sortedMatches = useMemo(() => {
     return [...matches].sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime());
@@ -41,7 +61,7 @@ export default function MatchesPage() {
   return (
     <div className="space">
       <h1 className="h1">比赛数据</h1>
-      <p className="sub">所有比赛都会保存在本地（localStorage）。你也可以导出/导入 JSON 或 Excel。支持按标签筛选查看（无平局）。</p>
+      <p className="sub">所有比赛都会保存在本地（localStorage）。你也可以导出/导入 JSON 或 Excel。支持按标签和赛季筛选查看（无平局）。当前：{seasonLabel(normalizedSeasonId)}</p>
 
       <div className="card">
         <div className="rowBetween" style={{ marginBottom: 12 }}>
@@ -57,6 +77,14 @@ export default function MatchesPage() {
             <button className={tagFilter === "live" ? "btn btnBrand" : "btn"} type="button" onClick={() => setTagFilter("live")}>
               直播
             </button>
+            <select className="input matchesSeasonSelect" value={normalizedSeasonId} onChange={(e) => setSeasonId(e.target.value)}>
+              <option value="all">全部赛季</option>
+              {seasons.map((season) => (
+                <option key={season.id} value={season.id}>
+                  {season.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="row" style={{ gap: 10 }}>

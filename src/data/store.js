@@ -3,6 +3,9 @@ import { saveAs } from "file-saver";
 import { INTERNAL_POINTS_NAME } from "../constants/labels.js";
 
 const STORAGE_KEY = "pool_tracker_v1";
+const SEASON_START_YEAR = 2025;
+const SEASON_START_MONTH = 9; // October, zero-based.
+const SEASON_MONTHS = 3;
 
 function safeParse(json, fallback) {
   try {
@@ -27,6 +30,103 @@ export function tagLabel(tag) {
 
 function compareStr(a, b) {
   return String(a).localeCompare(String(b), "zh-Hans-CN", { sensitivity: "base" });
+}
+
+function monthIndex(year, month) {
+  return year * 12 + month;
+}
+
+function seasonStartMonthIndex(seasonNumber) {
+  return monthIndex(SEASON_START_YEAR, SEASON_START_MONTH) + (seasonNumber - 1) * SEASON_MONTHS;
+}
+
+function monthIndexToYearMonth(index) {
+  return {
+    year: Math.floor(index / 12),
+    month: index % 12,
+  };
+}
+
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+
+export function normalizeSeasonId(seasonId) {
+  const text = String(seasonId ?? "all");
+  const match = text.match(/^season-(\d+)$/);
+  if (!match) return "all";
+
+  const seasonNumber = Number(match[1]);
+  return Number.isInteger(seasonNumber) && seasonNumber >= 1 ? `season-${seasonNumber}` : "all";
+}
+
+export function getSeasonNumberFromDate(dateISO) {
+  const date = new Date(dateISO);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const currentMonthIndex = monthIndex(date.getFullYear(), date.getMonth());
+  const firstMonthIndex = monthIndex(SEASON_START_YEAR, SEASON_START_MONTH);
+  if (currentMonthIndex < firstMonthIndex) return null;
+
+  return Math.floor((currentMonthIndex - firstMonthIndex) / SEASON_MONTHS) + 1;
+}
+
+export function getSeasonDateRange(seasonId) {
+  const normalized = normalizeSeasonId(seasonId);
+  if (normalized === "all") return null;
+
+  const seasonNumber = Number(normalized.replace("season-", ""));
+  const startIndex = seasonStartMonthIndex(seasonNumber);
+  const endIndex = startIndex + SEASON_MONTHS - 1;
+  const start = monthIndexToYearMonth(startIndex);
+  const end = monthIndexToYearMonth(endIndex);
+
+  return {
+    seasonId: normalized,
+    seasonNumber,
+    startYear: start.year,
+    startMonth: start.month,
+    endYear: end.year,
+    endMonth: end.month,
+    startLabel: `${start.year}/${pad2(start.month + 1)}`,
+    endLabel: `${end.year}/${pad2(end.month + 1)}`,
+  };
+}
+
+export function seasonLabel(seasonId) {
+  const range = getSeasonDateRange(seasonId);
+  if (!range) return "全部赛季";
+  return `第${range.seasonNumber}赛季（${range.startLabel}-${range.endLabel}）`;
+}
+
+export function filterMatchesBySeason(matches, seasonId = "all") {
+  const normalized = normalizeSeasonId(seasonId);
+  if (normalized === "all") return matches;
+
+  const expectedSeasonNumber = Number(normalized.replace("season-", ""));
+  return matches.filter((match) => getSeasonNumberFromDate(match.dateISO) === expectedSeasonNumber);
+}
+
+export function getAvailableSeasons(matchesInput = null) {
+  const matches = Array.isArray(matchesInput) ? matchesInput : loadAll().matches;
+  const seasonNumbers = matches
+    .map((match) => getSeasonNumberFromDate(match.dateISO))
+    .filter((seasonNumber) => Number.isInteger(seasonNumber) && seasonNumber >= 1);
+
+  const currentSeasonNumber = getSeasonNumberFromDate(new Date().toISOString());
+  if (Number.isInteger(currentSeasonNumber) && currentSeasonNumber >= 1) {
+    seasonNumbers.push(currentSeasonNumber);
+  }
+
+  const maxSeasonNumber = Math.max(1, ...seasonNumbers);
+  return Array.from({ length: maxSeasonNumber }, (_, index) => {
+    const seasonId = `season-${index + 1}`;
+    return {
+      id: seasonId,
+      label: seasonLabel(seasonId),
+      ...getSeasonDateRange(seasonId),
+    };
+  });
 }
 
 function migrate(data) {
@@ -474,17 +574,18 @@ function normalizeLeaderboardSortKey(k) {
  */
 export function exportLeaderboardToJSON(opts = {}) {
   const mode = normalizeMode(opts.mode ?? "all");
+  const seasonId = normalizeSeasonId(opts.seasonId ?? "all");
   const q = String(opts.q ?? "").trim();
   const minMatches = Number(opts.minMatches ?? 0);
   const sortKey = normalizeLeaderboardSortKey(opts.sortKey ?? "rating");
   const sortDir = opts.sortDir === "asc" ? "asc" : "desc";
 
-  const rows = buildFargoLiteLeaderboard({ mode, q, minMatches, sortKey, sortDir });
+  const rows = buildFargoLiteLeaderboard({ mode, seasonId, q, minMatches, sortKey, sortDir });
 
   const payload = {
     exportedAtISO: new Date().toISOString(),
     type: "leaderboard",
-    filters: { mode, q, minMatches, sortKey, sortDir },
+    filters: { mode, seasonId, seasonLabel: seasonLabel(seasonId), q, minMatches, sortKey, sortDir },
     // 只保留展示需要的字段（更干净）
     rows: rows.map((r, idx) => ({
       rank: idx + 1,
@@ -516,7 +617,7 @@ export function exportLeaderboardToJSON(opts = {}) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
 
-  const fname = `leaderboard-${safeFilenamePart(mode)}-${nowStamp()}.json`;
+  const fname = `leaderboard-${safeFilenamePart(mode)}-${safeFilenamePart(seasonId)}-${nowStamp()}.json`;
   a.href = url;
   a.download = fname;
 
@@ -532,12 +633,13 @@ export function exportLeaderboardToJSON(opts = {}) {
  */
 export async function exportLeaderboardToExcel(opts = {}) {
   const mode = normalizeMode(opts.mode ?? "all");
+  const seasonId = normalizeSeasonId(opts.seasonId ?? "all");
   const q = String(opts.q ?? "").trim();
   const minMatches = Number(opts.minMatches ?? 0);
   const sortKey = normalizeLeaderboardSortKey(opts.sortKey ?? "rating");
   const sortDir = opts.sortDir === "asc" ? "asc" : "desc";
 
-  const rows = buildFargoLiteLeaderboard({ mode, q, minMatches, sortKey, sortDir });
+  const rows = buildFargoLiteLeaderboard({ mode, seasonId, q, minMatches, sortKey, sortDir });
 
   const wb = new ExcelJS.Workbook();
   wb.creator = "Pool Match Tracker";
@@ -661,7 +763,7 @@ export async function exportLeaderboardToExcel(opts = {}) {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });
 
-  const fname = `leaderboard-${safeFilenamePart(mode)}-${nowStamp()}.xlsx`;
+  const fname = `leaderboard-${safeFilenamePart(mode)}-${safeFilenamePart(seasonId)}-${nowStamp()}.xlsx`;
   saveAs(blob, fname);
 }
 
@@ -840,6 +942,7 @@ export function calcPlayerStats(playerId, opts = {}) {
 
 export function buildFargoLiteLeaderboard(opts = {}) {
   const mode = normalizeMode(opts.mode ?? "all"); // all | practice | live
+  const seasonId = normalizeSeasonId(opts.seasonId ?? "all");
   const q = String(opts.q ?? "").trim().toLowerCase();
   const minMatches = Number(opts.minMatches ?? 0);
 
@@ -847,8 +950,8 @@ export function buildFargoLiteLeaderboard(opts = {}) {
   const sortDir = opts.sortDir ?? "desc";       // asc | desc
 
   const players = getPlayers();
-  const matchesAll = getMatches("all");
-  const matches = mode === "all" ? matchesAll : matchesAll.filter((m) => m.tag === mode);
+  const matchesAll = filterMatchesBySeason(getMatches("all"), seasonId);
+  const matches = mode === "all" ? matchesAll : matchesAll.filter((m) => normalizeTag(m.tag) === mode);
 
   const { rating, played } = computeRatingsFargoLiteHalf(players, matches);
 
@@ -856,7 +959,7 @@ export function buildFargoLiteLeaderboard(opts = {}) {
     const raw = rating.get(p.id) ?? 500;
     const rounded = Math.round(raw);
 
-    const stats = calcRackStatsForPlayerHalf(p.id, matchesAll, "all");
+    const stats = calcRackStatsForPlayerHalf(p.id, matchesAll, mode);
     return {
       id: p.id,
       name: p.name ?? "Unknown",

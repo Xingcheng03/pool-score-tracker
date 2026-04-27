@@ -1,5 +1,6 @@
 ﻿// src/pages/LeaderboardPage.jsx
 import React, { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   buildFargoLiteLeaderboard,
   tagLabel,
@@ -7,13 +8,22 @@ import {
   exportLeaderboardToExcel,
   getPlayers,
   getMatches,
+  getAvailableSeasons,
+  filterMatchesBySeason,
+  normalizeSeasonId,
+  seasonLabel,
 } from "../data/store.js";
 import { INTERNAL_POINTS_NAME } from "../constants/labels.js";
 
 export default function LeaderboardPage() {
   const [q, setQ] = useState("");
   const [mode, setMode] = useState("all"); // all | practice | live
+  const [seasonId, setSeasonId] = useState("all");
   const [minMatches, setMinMatches] = useState(0);
+  const allMatches = useMemo(() => getMatches("all"), []);
+  const seasons = useMemo(() => getAvailableSeasons(allMatches), [allMatches]);
+  const normalizedSeasonId = normalizeSeasonId(seasonId);
+  const seasonQuery = normalizedSeasonId === "all" ? "" : `?season=${normalizedSeasonId}`;
 
   // 鎺掑簭锛歳ating | rackWinRate | trend10 | matches
   // 鈿狅笍 娉ㄦ剰锛氭垜浠紶缁?store 鏃舵妸 matches 鏄犲皠鎴?effMatches锛堟姌绠楀満娆★級
@@ -30,19 +40,21 @@ export default function LeaderboardPage() {
 
     return buildFargoLiteLeaderboard({
       mode,
+      seasonId: normalizedSeasonId,
       q,
       minMatches,
       sortKey: keyMap[sortKey] ?? "rating",
       sortDir,
     });
-  }, [mode, q, minMatches, sortKey, sortDir]);
+  }, [mode, normalizedSeasonId, q, minMatches, sortKey, sortDir]);
 
   const topCount = Math.min(3, rows.length);
   const topThree = rows.slice(0, topCount);
   const tableRows = rows.slice(topCount);
   const winLoseRows = useMemo(() => {
     const players = getPlayers();
-    const matches = [...getMatches("all")].sort(
+    const scopedMatches = filterMatchesBySeason(getMatches("all"), normalizedSeasonId);
+    const matches = [...(mode === "all" ? scopedMatches : scopedMatches.filter((m) => m.tag === mode))].sort(
       (a, b) => new Date(a.dateISO).getTime() - new Date(b.dateISO).getTime(),
     );
 
@@ -94,7 +106,7 @@ export default function LeaderboardPage() {
         if (a.losses !== b.losses) return a.losses - b.losses;
         return String(a.name).localeCompare(String(b.name), "zh-Hans-CN", { sensitivity: "base" });
       });
-  }, [q]);
+  }, [q, mode, normalizedSeasonId]);
   const miniDense = winLoseRows.length > 14;
   const miniFontSize = winLoseRows.length > 20 ? 11 : winLoseRows.length > 16 ? 12 : 13;
   const miniCellPad = winLoseRows.length > 20 ? "7px 8px" : winLoseRows.length > 16 ? "9px 9px" : "11px 10px";
@@ -174,14 +186,14 @@ export default function LeaderboardPage() {
         <div>
           <h2 style={{ margin: 0 }}>球员积分榜</h2>
           <div style={{ color: "var(--muted)", fontSize: 13, marginTop: 6 }}>
-            {INTERNAL_POINTS_NAME}：按“局胜率 + 对手强度”计算 Rating（直播权重大于练习）
+            {INTERNAL_POINTS_NAME}：按“局胜率 + 对手强度”计算 Rating（直播权重大于练习） · {seasonLabel(normalizedSeasonId)}
           </div>
         </div>
       </div>
 
       {/* Filters */}
       <div className="card" style={{ marginTop: 12 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr 1fr", gap: 10 }}>
+        <div className="leaderboardFilterGrid">
           <input
             className="input"
             value={q}
@@ -193,6 +205,15 @@ export default function LeaderboardPage() {
             <option value="all">全部比赛</option>
             <option value="practice">{tagLabel("practice")}</option>
             <option value="live">{tagLabel("live")}</option>
+          </select>
+
+          <select className="input" value={normalizedSeasonId} onChange={(e) => setSeasonId(e.target.value)}>
+            <option value="all">全部赛季</option>
+            {seasons.map((season) => (
+              <option key={season.id} value={season.id}>
+                {season.label}
+              </option>
+            ))}
           </select>
 
           <select className="input" value={minMatches} onChange={(e) => setMinMatches(Number(e.target.value))}>
@@ -219,7 +240,7 @@ export default function LeaderboardPage() {
                 <button
                 className="btn"
                 type="button"
-                onClick={() => exportLeaderboardToExcel({ mode, q, minMatches, sortKey, sortDir })}
+                onClick={() => exportLeaderboardToExcel({ mode, seasonId: normalizedSeasonId, q, minMatches, sortKey, sortDir })}
                 >
                 导出积分榜 Excel
                 </button>
@@ -238,7 +259,9 @@ export default function LeaderboardPage() {
                 <div key={r.id} className={`leaderboardTopCard leaderboardTopCardRank${rank}`}>
                   <div className="leaderboardTopCardHeader">
                     <div className={`leaderboardTopCardRankNum leaderboardTopCardRankNum${rank}`}>{rank}</div>
-                    <div className="leaderboardTopCardName">{r.name}</div>
+                    <Link className="leaderboardTopCardName" to={`/players/${r.id}${seasonQuery}`}>
+                      {r.name}
+                    </Link>
                     {rank === 1 && <div className="leaderboardTopCardTrophy">{"\uD83C\uDFC6"}</div>}
                   </div>
                   <div className="leaderboardTopCardStats">
@@ -301,11 +324,13 @@ export default function LeaderboardPage() {
               {tableRows.map((r, idx) => (
                 <tr key={r.id} style={{ borderBottom: "1px solid var(--line)" }}>
                   <td style={{ padding: 12, fontSize: 13 }}>{topCount + idx + 1}</td>
-                  <td style={{ padding: 12, fontWeight: 700 }}>{r.name}</td>
+                  <td style={{ padding: 12, fontWeight: 700 }}>
+                    <Link to={`/players/${r.id}${seasonQuery}`}>{r.name}</Link>
+                  </td>
                   <td style={{ padding: 12 }}>{Math.round(r.rating)}</td>
                   <td style={{ padding: 12, ...tierStyle(r.tier) }}>{r.tier}</td>
                   <td style={{ padding: 12 }}>
-                    {r.confidence} · {r.totalMatches}场 / {r.racks}局
+                    {r.confidence} · {r.effMatches}场 / {r.racks}局
                   </td>
                   <td style={{ padding: 12 }}>{(r.rackWinRate * 100).toFixed(1)}%</td>
                   <td style={{ padding: 12, color: r.trend10 >= 0 ? "var(--primary)" : "var(--danger)" }}>
@@ -348,7 +373,9 @@ export default function LeaderboardPage() {
                   winLoseRows.map((r, idx) => (
                     <tr key={r.id} style={{ borderBottom: "1px solid var(--line)" }}>
                       <td style={{ padding: miniCellPad, fontSize: miniFontSize }}>{idx + 1}</td>
-                      <td style={{ padding: miniCellPad, fontWeight: 700, fontSize: miniFontSize }}>{r.name}</td>
+                      <td style={{ padding: miniCellPad, fontWeight: 700, fontSize: miniFontSize }}>
+                        <Link to={`/players/${r.id}${seasonQuery}`}>{r.name}</Link>
+                      </td>
                       <td style={{ padding: miniCellPad, fontSize: miniFontSize }}>{r.wins}胜 {r.losses}负</td>
                       <td style={{ padding: miniCellPad, fontSize: miniFontSize }}>{r.streak}</td>
                     </tr>

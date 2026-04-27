@@ -1,10 +1,14 @@
 import React, { useMemo, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   calcPlayerStats,
+  filterMatchesBySeason,
+  getAvailableSeasons,
   getMatches,
   getPlayerFargoRatingHistory,
   getPlayers,
+  normalizeSeasonId,
+  seasonLabel,
 } from "../data/store.js";
 import { INTERNAL_POINTS_NAME } from "../constants/labels.js";
 
@@ -807,7 +811,7 @@ function FargoHistoryChart({ history, playerMap }) {
   );
 }
 
-function OpponentCard({ title, list, playerMap }) {
+function OpponentCard({ title, list, playerMap, seasonQuery }) {
   return (
     <div className="card playerDetailOpponentCard">
       <div className="rowBetween playerDetailCardHead">
@@ -820,7 +824,7 @@ function OpponentCard({ title, list, playerMap }) {
         <ul className="playerDetailOpponentList">
           {list.map((item) => (
             <li key={item.opponentId}>
-              <Link to={`/players/${item.opponentId}`}>{playerMap.get(item.opponentId)?.name ?? "Unknown"}</Link>
+              <Link to={`/players/${item.opponentId}${seasonQuery}`}>{playerMap.get(item.opponentId)?.name ?? "Unknown"}</Link>
               <span> × {formatCount(item.count)}</span>
             </li>
           ))}
@@ -830,7 +834,7 @@ function OpponentCard({ title, list, playerMap }) {
   );
 }
 
-function MatchTable({ stats, playerId, playerMap }) {
+function MatchTable({ stats, playerId, playerMap, seasonQuery }) {
   return (
     <div className="card playerDetailTableCard">
       <div className="rowBetween playerDetailCardHead">
@@ -878,7 +882,7 @@ function MatchTable({ stats, playerId, playerMap }) {
                     <td>{formatDate(match.dateISO)}</td>
                     <td>抢 {match.raceTo}</td>
                     <td>
-                      <Link to={`/players/${opponentId}`}>{opponent?.name ?? "Unknown"}</Link>
+                      <Link to={`/players/${opponentId}${seasonQuery}`}>{opponent?.name ?? "Unknown"}</Link>
                     </td>
                     <td>
                       {meScore} : {opponentScore}
@@ -897,7 +901,7 @@ function MatchTable({ stats, playerId, playerMap }) {
   );
 }
 
-function Section({ title, stats, playerId, playerMap }) {
+function Section({ title, stats, playerId, playerMap, seasonQuery }) {
   return (
     <section className="card playerDetailSection">
       <div className="rowBetween playerDetailSectionHead">
@@ -917,12 +921,12 @@ function Section({ title, stats, playerId, playerMap }) {
           </div>
 
           <div className="playerDetailOpponentGrid">
-            <OpponentCard title="战胜的对手（次数）" list={stats.beatenList} playerMap={playerMap} />
-            <OpponentCard title="战败的对手（次数）" list={stats.lostToList} playerMap={playerMap} />
+            <OpponentCard title="战胜的对手（次数）" list={stats.beatenList} playerMap={playerMap} seasonQuery={seasonQuery} />
+            <OpponentCard title="战败的对手（次数）" list={stats.lostToList} playerMap={playerMap} seasonQuery={seasonQuery} />
           </div>
         </div>
 
-        <MatchTable stats={stats} playerId={playerId} playerMap={playerMap} />
+        <MatchTable stats={stats} playerId={playerId} playerMap={playerMap} seasonQuery={seasonQuery} />
       </div>
     </section>
   );
@@ -930,10 +934,17 @@ function Section({ title, stats, playerId, playerMap }) {
 
 export default function PlayerDetailPage() {
   const { playerId } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [tick, setTick] = useState(0);
 
   const players = useMemo(() => getPlayers(), [tick]);
-  const matches = useMemo(() => getMatches("all"), [tick]);
+  const allMatches = useMemo(() => getMatches("all"), [tick]);
+  const seasons = useMemo(() => getAvailableSeasons(allMatches), [allMatches]);
+  const selectedSeasonId = normalizeSeasonId(searchParams.get("season") ?? "all");
+  const matches = useMemo(
+    () => filterMatchesBySeason(allMatches, selectedSeasonId),
+    [allMatches, selectedSeasonId],
+  );
   const playerMap = useMemo(() => new Map(players.map((item) => [item.id, item])), [players]);
   const player = playerMap.get(playerId) ?? null;
   const statsPractice = useMemo(
@@ -948,6 +959,15 @@ export default function PlayerDetailPage() {
     () => getPlayerFargoRatingHistory(playerId, { _players: players, _matches: matches }),
     [playerId, players, matches],
   );
+  const seasonQuery = selectedSeasonId === "all" ? "" : `?season=${selectedSeasonId}`;
+
+  function handleSeasonChange(nextSeasonId) {
+    const normalized = normalizeSeasonId(nextSeasonId);
+    const nextParams = new URLSearchParams(searchParams);
+    if (normalized === "all") nextParams.delete("season");
+    else nextParams.set("season", normalized);
+    setSearchParams(nextParams, { replace: true });
+  }
 
   if (!player) {
     return (
@@ -970,10 +990,22 @@ export default function PlayerDetailPage() {
       <div className="rowBetween" style={{ marginBottom: 14 }}>
         <div>
           <h1 className="h1">{player.name}</h1>
-          <p className="sub">分标签战绩：练习赛 + 直播（无平局）</p>
+          <p className="sub">分标签战绩：练习赛 + 直播（无平局） · {seasonLabel(selectedSeasonId)}</p>
         </div>
 
         <div className="row">
+          <select
+            className="input playerDetailSeasonSelect"
+            value={selectedSeasonId}
+            onChange={(event) => handleSeasonChange(event.target.value)}
+          >
+            <option value="all">全部赛季</option>
+            {seasons.map((season) => (
+              <option key={season.id} value={season.id}>
+                {season.label}
+              </option>
+            ))}
+          </select>
           <button className="btn" onClick={() => setTick((value) => value + 1)} type="button">
             刷新
           </button>
@@ -984,8 +1016,8 @@ export default function PlayerDetailPage() {
       </div>
 
       <FargoHistoryChart history={fargoHistory} playerMap={playerMap} />
-      <Section title="练习赛统计与记录" stats={statsPractice} playerId={playerId} playerMap={playerMap} />
-      <Section title="直播统计与记录" stats={statsLive} playerId={playerId} playerMap={playerMap} />
+      <Section title="练习赛统计与记录" stats={statsPractice} playerId={playerId} playerMap={playerMap} seasonQuery={seasonQuery} />
+      <Section title="直播统计与记录" stats={statsLive} playerId={playerId} playerMap={playerMap} seasonQuery={seasonQuery} />
     </div>
   );
 }
