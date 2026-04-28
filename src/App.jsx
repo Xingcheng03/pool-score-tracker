@@ -5,7 +5,6 @@ import PageShell from "./components/PageShell.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 import AccountPage from "./pages/AccountPage.jsx";
-import AdminDataPage from "./pages/AdminDataPage.jsx";
 import AdminReportsPage from "./pages/AdminReportsPage.jsx";
 import LeaderboardPage from "./pages/LeaderboardPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
@@ -35,7 +34,6 @@ export default function App() {
           <Route path="/win-lose-points" element={<ProtectedPage><WinLosePointsPage /></ProtectedPage>} />
           <Route path="/account" element={<ProtectedPage><AccountPage /></ProtectedPage>} />
           <Route path="/admin/reports" element={<ProtectedPage adminOnly><AdminReportsPage /></ProtectedPage>} />
-          <Route path="/admin/data" element={<ProtectedPage adminOnly><AdminDataPage /></ProtectedPage>} />
           <Route path="*" element={<Navigate to="/matches" replace />} />
         </Routes>
       </PageShell>

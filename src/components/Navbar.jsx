@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/useAuth.js";
 import { INTERNAL_POINTS_NAME } from "../constants/labels.js";
@@ -7,6 +7,7 @@ export default function Navbar() {
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
   const linkClass = ({ isActive }) => (isActive ? "pill pillActive" : "pill");
+  const accountLink = user?.player?.id ? `/players/${user.player.id}` : "/account";
 
   return (
     <div className="nav">
@@ -20,50 +21,50 @@ export default function Navbar() {
           {isAuthenticated ? (
             <>
               <NavLink to="/matches" className={linkClass}>
-                比赛数据
+                Matches
               </NavLink>
               <NavLink to="/players" className={linkClass}>
-                球员
+                Players
               </NavLink>
               <NavLink to="/new" className={linkClass}>
-                上报比赛
+                Submit Match
               </NavLink>
               <NavLink to="/leaderboard" className={linkClass}>
                 {INTERNAL_POINTS_NAME}
               </NavLink>
               <NavLink to="/win-lose-points" className={linkClass}>
-                胜负积分榜
+                Win/Loss Points
               </NavLink>
               {isAdmin && (
-                <>
-                  <NavLink to="/admin/reports" className={linkClass}>
-                    审核比分
-                  </NavLink>
-                  <NavLink to="/admin/data" className={linkClass}>
-                    数据导入导出
-                  </NavLink>
-                </>
+                <NavLink to="/admin/reports" className={linkClass}>
+                  Review Scores
+                </NavLink>
               )}
-              <NavLink to="/account" className={linkClass}>
-                {user?.username ?? "账号"}
-              </NavLink>
-              <button
-                className="pill navButton"
-                type="button"
-                onClick={() => {
-                  logout();
-                  navigate("/login", { replace: true });
-                }}
-              >
-                退出
-              </button>
             </>
           ) : (
             <NavLink to="/login" className={linkClass}>
-              登录
+              Login
             </NavLink>
           )}
         </div>
+
+        {isAuthenticated && (
+          <div className="navAccountLinks">
+            <NavLink to={accountLink} className={linkClass}>
+              {user?.username ?? "Account"}
+            </NavLink>
+            <button
+              className="pill navButton"
+              type="button"
+              onClick={() => {
+                logout();
+                navigate("/login", { replace: true });
+              }}
+            >
+              Logout
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

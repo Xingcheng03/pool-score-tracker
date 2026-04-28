@@ -112,6 +112,7 @@ export default function LeaderboardPage() {
         <div className="card" style={{ marginTop: 12 }}>加载中...</div>
       ) : (
         <div className="leaderboardSplit">
+          <div className="leaderboardMainColumn">
           {topThree.length > 0 && (
             <div className="leaderboardTop3">
               {topThree.map((row, idx) => {
@@ -187,6 +188,7 @@ export default function LeaderboardPage() {
               </tbody>
             </table>
           </div>
+          </div>
 
           <div className="card leaderboardWinLoseCard" style={{ padding: 0, overflow: "hidden" }}>
             <div className="leaderboardWinLoseHead">胜负战绩榜</div>
@@ -223,10 +225,57 @@ export default function LeaderboardPage() {
         </div>
       )}
 
-      <div className="card leaderboardRulesCard" style={{ marginTop: 16 }}>
+      <div className="card leaderboardRulesCard">
         <div className="leaderboardRulesTitle">积分计算规则说明</div>
-        <div>
-          后端使用和原 `store.js` 相同的 FargoLite 计算逻辑：初始 Rating 500，按比赛时间顺序回放，比较实际局胜率与预期局胜率，并按直播/练习、放门、强弱对阵和稳定系数进行加权。
+        <div className="leaderboardRulesGrid">
+          <div className="leaderboardRuleBlock">
+            <h3>1. 基础逻辑</h3>
+            <p>每位球员初始 Rating 都是 500。系统会把筛选范围内的正式比赛按时间从早到晚重新回放，每打一场就更新一次双方 Rating。</p>
+            <p>单场核心公式是：变化值 = 40 ×（实际局胜率 - 预期局胜率）× 比赛权重 × 稳定系数。</p>
+          </div>
+
+          <div className="leaderboardRuleBlock">
+            <h3>2. 实际局胜率与预期局胜率</h3>
+            <p>实际局胜率按比分算，例如 7:3 获胜，实际局胜率就是 7 / 10 = 70%。</p>
+            <p>预期局胜率由双方赛前 Rating 计算：1 / (1 + 10^((对手Rating - 我的Rating) / 200))。强者本来就应该赢更多局，所以强者只小赢会少加分，弱者打出高于预期的比分会多加分。</p>
+          </div>
+
+          <div className="leaderboardRuleBlock">
+            <h3>3. 练习赛和直播权重</h3>
+            <p>练习赛基础权重是 1.0，直播基础权重是 1.5。也就是说，同样的比分表现，直播比赛对 Rating 的影响比练习赛更大。</p>
+          </div>
+
+          <div className="leaderboardRuleBlock">
+            <h3>4. 非放门比赛的强弱对阵加权</h3>
+            <p>非放门比赛会根据双方赛前排名差调整权重。排名差小于 5 名时不额外调整。</p>
+            <p>练习赛：差 5-9 名，强者赢权重 0.8、爆冷权重 1.2；差 10-14 名，强者赢 0.6、爆冷 1.4；差 15 名以上，强者赢 0.4、爆冷 1.6。</p>
+            <p>直播：差 5-9 名，强者赢 1.3、爆冷 1.7；差 10-14 名，强者赢 1.1、爆冷 1.9；差 15 名以上，强者赢 0.9、爆冷 2.1。</p>
+          </div>
+
+          <div className="leaderboardRuleBlock">
+            <h3>5. 放门比赛怎么算</h3>
+            <p>放门比赛不再套用强弱排名差加权，因为让球已经补偿了强弱差距。</p>
+            <p>如果放门方获胜，按标签基础权重计算：练习赛 1.0，直播 1.5。如果被放门方获胜，Rating 权重减半：练习赛 0.5，直播 0.75。</p>
+            <p>排行榜里的局数、折算场次、胜负统计也会按同一放门折算：只有“被放门方获胜”时，双方本场按练习赛 0.5 或直播 0.75 计入；其他情况按 1 场计入。</p>
+          </div>
+
+          <div className="leaderboardRuleBlock">
+            <h3>6. 稳定系数</h3>
+            <p>打得越多，单场波动越小。稳定系数 = 1 / sqrt(1 + 已参加场次 / 10)。新玩家变化更明显，老玩家更稳定。</p>
+            <p>例如一个人此前 0 场，稳定系数是 1；此前 30 场，稳定系数约为 0.5，本场加减分会被压到一半左右。</p>
+          </div>
+
+          <div className="leaderboardRuleBlock">
+            <h3>7. 左右双方如何同时更新</h3>
+            <p>系统先按左侧球员计算 delta。左侧 Rating 增加 delta × 左侧稳定系数；右侧 Rating 减少 delta × 右侧稳定系数。delta 可能为负，所以左侧表现低于预期会扣分，右侧相应加分。</p>
+          </div>
+
+          <div className="leaderboardRuleBlock">
+            <h3>8. 排行榜其他字段</h3>
+            <p>局胜率 = 折算后赢下的局数 / 折算后总局数。直播局胜率和练习局胜率分别只看对应标签。</p>
+            <p>最近10场趋势 = 最近 10 场中每场（我的局数 - 对手局数）× 2，并限制在 -20 到 +20 之间，再叠加放门折算。</p>
+            <p>可信度按折算场次显示：低于 10 场为低，10 到 29.99 场为中，30 场及以上为高。</p>
+          </div>
         </div>
       </div>
     </div>

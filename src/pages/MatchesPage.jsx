@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useState } from "react";
+﻿import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/useAuth.js";
 import ConfirmButton from "../components/ConfirmButton.jsx";
-import { apiRequest } from "../lib/api.js";
+import { apiRequest, downloadJson, jsonBody } from "../lib/api.js";
 
 function fmtDate(iso) {
   const d = new Date(iso);
@@ -17,13 +17,22 @@ function tagLabel(tag) {
   return tag === "live" ? "直播" : "练习赛";
 }
 
+function todayName() {
+  const date = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `pool-data-${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}.json`;
+}
+
 export default function MatchesPage() {
   const { isAdmin } = useAuth();
+  const importInputRef = useRef(null);
   const [matches, setMatches] = useState([]);
   const [players, setPlayers] = useState([]);
   const [tagFilter, setTagFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [dataMessage, setDataMessage] = useState("");
+  const [dataBusy, setDataBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -52,12 +61,47 @@ export default function MatchesPage() {
     await load();
   }
 
+  async function exportJson() {
+    setError("");
+    setDataMessage("");
+    setDataBusy(true);
+    try {
+      const payload = await apiRequest("/data/export");
+      downloadJson(todayName(), payload);
+      setDataMessage(`已导出 ${payload.players.length} 名球员、${payload.matches.length} 场正式比赛。`);
+    } catch (err) {
+      setError(err?.message ?? String(err));
+    } finally {
+      setDataBusy(false);
+    }
+  }
+
+  async function importJson(file) {
+    if (!file) return;
+    setError("");
+    setDataMessage("");
+    setDataBusy(true);
+
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const result = await apiRequest("/data/import", {
+        method: "POST",
+        body: jsonBody(parsed),
+      });
+      setDataMessage(`导入完成：球员 ${result.importedPlayers}，比赛 ${result.importedMatches}，跳过 ${result.skippedMatches.length}。`);
+      await load();
+    } catch (err) {
+      setError(err?.message ?? String(err));
+    } finally {
+      setDataBusy(false);
+      if (importInputRef.current) importInputRef.current.value = "";
+    }
+  }
+
   return (
     <div className="space">
       <h1 className="h1">比赛数据</h1>
-      <p className="sub">
-        这里展示后端正式比赛记录。球员上报的比分必须先由管理员审核，通过后才会出现在这里并进入排行榜。
-      </p>
 
       <div className="card">
         <div className="rowBetween" style={{ marginBottom: 12 }}>
@@ -75,11 +119,29 @@ export default function MatchesPage() {
           </div>
 
           <div className="row">
+            {isAdmin && (
+              <>
+                <button className="btn" type="button" onClick={exportJson} disabled={dataBusy}>
+                  导出 JSON
+                </button>
+                <button className="btn" type="button" disabled={dataBusy} onClick={() => importInputRef.current?.click()}>
+                  导入 JSON
+                </button>
+                <input
+                  ref={importInputRef}
+                  type="file"
+                  accept="application/json"
+                  hidden
+                  onChange={(event) => importJson(event.target.files?.[0])}
+                />
+              </>
+            )}
             <Link className="btn btnBrand" to="/new">上报比赛</Link>
             <button className="btn" onClick={load} type="button">刷新</button>
           </div>
         </div>
 
+        {dataMessage && <div className="successBox" style={{ marginBottom: 12 }}>{dataMessage}</div>}
         {error && <div className="errorBox" style={{ marginBottom: 12 }}>{error}</div>}
 
         {loading ? (
@@ -138,3 +200,4 @@ export default function MatchesPage() {
     </div>
   );
 }
+

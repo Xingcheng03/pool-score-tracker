@@ -1,5 +1,7 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useAuth } from "../auth/useAuth.js";
+import AccountSettingsForm from "../components/AccountSettingsForm.jsx";
 import { INTERNAL_POINTS_NAME } from "../constants/labels.js";
 import { apiRequest, buildQuery } from "../lib/api.js";
 
@@ -40,6 +42,12 @@ function SummaryCard({ label, value }) {
 
 function playerName(players, id) {
   return players.find((player) => player.id === id)?.name ?? "Unknown";
+}
+
+function buildLinePath(points) {
+  if (points.length === 0) return "";
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+  return points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
 }
 
 function OpponentCard({ title, list, players, seasonQuery }) {
@@ -150,7 +158,69 @@ function Section({ title, stats, playerId, players, seasonQuery }) {
 }
 
 function RatingHistory({ history, players }) {
-  const latest = [...(history.points ?? [])].slice(-12).reverse();
+  const [hoveredPoint, setHoveredPoint] = useState(null);
+  const rawHistoryPoints = useMemo(() => history.points ?? [], [history.points]);
+  const chart = useMemo(() => {
+    const width = 960;
+    const height = 300;
+    const pad = { top: 24, right: 36, bottom: 42, left: 54 };
+    const innerWidth = width - pad.left - pad.right;
+    const innerHeight = height - pad.top - pad.bottom;
+    const points = [
+      {
+        id: "start",
+        isStart: true,
+        rating: Number(history.startRating ?? 500),
+        delta: 0,
+      },
+      ...rawHistoryPoints.map((point, index) => ({
+        ...point,
+        id: point.matchId ?? `point-${index}`,
+        rating: Number(point.rating ?? 0),
+        delta: Number(point.delta ?? 0),
+      })),
+    ];
+    const ratings = points.map((point) => point.rating).filter(Number.isFinite);
+    const minRating = Math.min(...ratings, Number(history.lowestRating ?? 500), Number(history.startRating ?? 500));
+    const maxRating = Math.max(...ratings, Number(history.highestRating ?? 500), Number(history.startRating ?? 500));
+    const spread = Math.max(8, maxRating - minRating);
+    const minY = minRating - spread * 0.18;
+    const maxY = maxRating + spread * 0.18;
+    const yRange = Math.max(1, maxY - minY);
+    const xStep = points.length <= 1 ? 0 : innerWidth / (points.length - 1);
+    const scaled = points.map((point, index) => {
+      const x = pad.left + xStep * index;
+      const y = pad.top + ((maxY - point.rating) / yRange) * innerHeight;
+      return {
+        ...point,
+        x,
+        y,
+        tooltipX: (x / width) * 100,
+        tooltipY: (y / height) * 100,
+      };
+    });
+    const linePath = buildLinePath(scaled);
+    const areaPath = scaled.length > 0
+      ? `${linePath} L ${scaled[scaled.length - 1].x} ${height - pad.bottom} L ${scaled[0].x} ${height - pad.bottom} Z`
+      : "";
+    const segments = scaled.slice(1).map((point, index) => {
+      const previous = scaled[index];
+      return {
+        id: `${previous.id}-${point.id}`,
+        path: `M ${previous.x} ${previous.y} L ${point.x} ${point.y}`,
+        delta: point.delta,
+      };
+    });
+    const grid = Array.from({ length: 5 }, (_, index) => {
+      const ratio = index / 4;
+      return {
+        y: pad.top + innerHeight * ratio,
+        value: maxY - yRange * ratio,
+      };
+    });
+
+    return { width, height, pad, innerWidth, scaled, areaPath, segments, grid };
+  }, [history, rawHistoryPoints]);
 
   return (
     <section className="card playerFargoCard">
@@ -171,46 +241,111 @@ function RatingHistory({ history, players }) {
         </div>
       </div>
 
-      {latest.length === 0 ? (
+      {rawHistoryPoints.length === 0 ? (
         <div className="playerFargoEmpty">暂无积分历史。</div>
       ) : (
-        <div className="tableWrap">
-          <table>
-            <thead>
-              <tr>
-                <th>时间</th>
-                <th>比赛</th>
-                <th>标签</th>
-                <th>对手</th>
-                <th>比分</th>
-                <th>Rating</th>
-                <th>变化</th>
-              </tr>
-            </thead>
-            <tbody>
-              {latest.map((point) => (
-                <tr key={point.matchId}>
-                  <td>{formatDate(point.dateISO)}</td>
-                  <td>{point.matchName}</td>
-                  <td>{point.tag === "live" ? "直播" : "练习赛"}</td>
-                  <td>{playerName(players, point.opponentId)}</td>
-                  <td>{point.myScore} : {point.opponentScore}</td>
-                  <td>{formatRating(point.rating)}</td>
-                  <td style={{ color: point.delta >= 0 ? "var(--primary)" : "var(--danger)", fontWeight: 900 }}>
-                    {formatSignedRating(point.delta)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="playerFargoCanvas" onMouseLeave={() => setHoveredPoint(null)}>
+          <svg className="playerFargoSvg" viewBox={`0 0 ${chart.width} ${chart.height}`} role="img" aria-label="Rating history chart">
+            <defs>
+              <linearGradient id="playerFargoArea" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgba(100, 116, 139, 0.16)" />
+                <stop offset="100%" stopColor="rgba(100, 116, 139, 0.02)" />
+              </linearGradient>
+            </defs>
+
+            {chart.grid.map((line) => (
+              <g key={line.y}>
+                <line
+                  x1={chart.pad.left}
+                  x2={chart.pad.left + chart.innerWidth}
+                  y1={line.y}
+                  y2={line.y}
+                  stroke="rgba(148, 163, 184, 0.24)"
+                  strokeDasharray="6 8"
+                />
+                <text x={chart.pad.left - 12} y={line.y + 4} textAnchor="end" fill="rgba(100, 116, 139, 0.9)" fontSize="12" fontWeight="800">
+                  {formatRating(line.value)}
+                </text>
+              </g>
+            ))}
+
+            <line
+              x1={chart.pad.left}
+              x2={chart.pad.left + chart.innerWidth}
+              y1={chart.height - chart.pad.bottom}
+              y2={chart.height - chart.pad.bottom}
+              stroke="rgba(15, 23, 42, 0.12)"
+            />
+            <path d={chart.areaPath} fill="url(#playerFargoArea)" />
+            {chart.segments.map((segment) => (
+              <path
+                key={segment.id}
+                d={segment.path}
+                fill="none"
+                stroke={segment.delta >= 0 ? "var(--primary)" : "var(--danger)"}
+                strokeWidth="2.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            ))}
+
+            {chart.scaled.map((point, index) => {
+              const isHovered = hoveredPoint?.id === point.id;
+              const pointColor = point.isStart ? "var(--muted)" : point.delta >= 0 ? "var(--primary)" : "var(--danger)";
+              return (
+                <g
+                  key={`${point.id}-${index}`}
+                  onMouseEnter={() => setHoveredPoint(point)}
+                  onFocus={() => setHoveredPoint(point)}
+                  tabIndex={0}
+                  style={{ cursor: "pointer" }}
+                >
+                  <circle cx={point.x} cy={point.y} r={isHovered ? 7 : 4.5} fill="#ffffff" stroke={pointColor} strokeWidth={isHovered ? 3 : 2.4} />
+                  <circle cx={point.x} cy={point.y} r="14" fill="transparent" />
+                </g>
+              );
+            })}
+          </svg>
+
+          {hoveredPoint && (
+            <div
+              className="playerFargoTooltip"
+              style={{
+                left: `${Math.min(76, Math.max(4, hoveredPoint.tooltipX))}%`,
+                top: `${Math.min(66, Math.max(8, hoveredPoint.tooltipY))}%`,
+              }}
+            >
+              <div className="playerFargoTooltipDate">{hoveredPoint.isStart ? "起始 Rating" : formatDate(hoveredPoint.dateISO)}</div>
+              <div className="playerFargoTooltipMetrics">
+                <div className="playerFargoTooltipMetric">
+                  <span>Rating</span>
+                  <strong>{formatRating(hoveredPoint.rating)}</strong>
+                </div>
+                <div className="playerFargoTooltipMetric">
+                  <span>变化</span>
+                  <strong className={hoveredPoint.delta > 0 ? "isUp" : hoveredPoint.delta < 0 ? "isDown" : ""}>
+                    {formatSignedRating(hoveredPoint.delta)}
+                  </strong>
+                </div>
+              </div>
+              {!hoveredPoint.isStart && (
+                <>
+                  <div className="playerFargoTooltipInfo">
+                    {hoveredPoint.tag === "live" ? "直播" : "练习赛"} · 对手 {playerName(players, hoveredPoint.opponentId)} · {hoveredPoint.myScore} : {hoveredPoint.opponentScore}
+                  </div>
+                  <div className="playerFargoTooltipMatch">{hoveredPoint.matchName}</div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
     </section>
   );
 }
-
 export default function PlayerDetailPage() {
   const { playerId } = useParams();
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [players, setPlayers] = useState([]);
   const [seasons, setSeasons] = useState([]);
@@ -220,6 +355,7 @@ export default function PlayerDetailPage() {
 
   const selectedSeasonId = searchParams.get("season") ?? "all";
   const seasonQuery = selectedSeasonId === "all" ? "" : `?season=${selectedSeasonId}`;
+  const isOwnPlayerPage = user?.player?.id === playerId;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -257,11 +393,13 @@ export default function PlayerDetailPage() {
 
   return (
     <div>
-      <div className="rowBetween" style={{ marginBottom: 14 }}>
+      <div className="playerDetailHero">
         <div>
           <h1 className="h1">{data.player.name}</h1>
           <p className="sub">分标签战绩：练习赛 + 直播。数据来自后端正式比赛记录。</p>
         </div>
+
+        {isOwnPlayerPage && <AccountSettingsForm compact />}
 
         <div className="row">
           <select className="input playerDetailSeasonSelect" value={selectedSeasonId} onChange={(event) => handleSeasonChange(event.target.value)}>
