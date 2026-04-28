@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  PLAYER
+}
+
+enum MatchTag {
+  PRACTICE
+  LIVE
+}
+
+enum MatchReportStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AuditAction {
+  MATCH_REPORT_APPROVED
+  MATCH_REPORT_REJECTED
+  PLAYER_ACCOUNT_CREATED
+  PLAYER_ACCOUNT_UPDATED
+  DATA_IMPORTED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  role         UserRole @default(PLAYER)
+  playerId     String?  @unique
+  player       Player?  @relation(fields: [playerId], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  submittedReports MatchReport[] @relation("SubmittedReports")
+  reviewedReports  MatchReport[] @relation("ReviewedReports")
+  auditLogs        AuditLog[]
+}
+
+model Player {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User?
+
+  leftMatches     Match[] @relation("LeftPlayerMatches")
+  rightMatches    Match[] @relation("RightPlayerMatches")
+  wonMatches      Match[] @relation("WinnerMatches")
+  handicapGiven   Match[] @relation("HandicapGiverMatches")
+  handicapReceived Match[] @relation("HandicapReceiverMatches")
+
+  leftReports      MatchReport[] @relation("LeftPlayerReports")
+  rightReports     MatchReport[] @relation("RightPlayerReports")
+  wonReports       MatchReport[] @relation("WinnerReports")
+  handicapReportGiven    MatchReport[] @relation("HandicapGiverReports")
+  handicapReportReceived MatchReport[] @relation("HandicapReceiverReports")
+}
+
+model Match {
+  id                 String   @id @default(cuid())
+  matchName          String
+  dateISO            DateTime
+  raceTo             Int
+  leftPlayerId       String
+  rightPlayerId      String
+  leftScore          Int
+  rightScore         Int
+  winnerId           String?
+  tag                MatchTag @default(PRACTICE)
+  isHandicap         Boolean  @default(false)
+  handicapGiverId    String?
+  handicapReceiverId String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  leftPlayer       Player @relation("LeftPlayerMatches", fields: [leftPlayerId], references: [id], onDelete: Restrict)
+  rightPlayer      Player @relation("RightPlayerMatches", fields: [rightPlayerId], references: [id], onDelete: Restrict)
+  winner           Player? @relation("WinnerMatches", fields: [winnerId], references: [id], onDelete: SetNull)
+  handicapGiver    Player? @relation("HandicapGiverMatches", fields: [handicapGiverId], references: [id], onDelete: SetNull)
+  handicapReceiver Player? @relation("HandicapReceiverMatches", fields: [handicapReceiverId], references: [id], onDelete: SetNull)
+  sourceReport     MatchReport? @relation("ApprovedMatch")
+
+  @@index([dateISO])
+  @@index([tag])
+  @@index([leftPlayerId])
+  @@index([rightPlayerId])
+}
+
+model MatchReport {
+  id                 String            @id @default(cuid())
+  matchName          String
+  dateISO            DateTime
+  raceTo             Int
+  leftPlayerId       String
+  rightPlayerId      String
+  leftScore          Int
+  rightScore         Int
+  winnerId           String?
+  tag                MatchTag          @default(PRACTICE)
+  isHandicap         Boolean           @default(false)
+  handicapGiverId    String?
+  handicapReceiverId String?
+  status             MatchReportStatus @default(PENDING)
+  submittedById      String
+  reviewedById       String?
+  reviewedAt         DateTime?
+  rejectionReason    String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  submittedBy      User   @relation("SubmittedReports", fields: [submittedById], references: [id], onDelete: Restrict)
+  reviewedBy       User?  @relation("ReviewedReports", fields: [reviewedById], references: [id], onDelete: SetNull)
+  leftPlayer       Player @relation("LeftPlayerReports", fields: [leftPlayerId], references: [id], onDelete: Restrict)
+  rightPlayer      Player @relation("RightPlayerReports", fields: [rightPlayerId], references: [id], onDelete: Restrict)
+  winner           Player? @relation("WinnerReports", fields: [winnerId], references: [id], onDelete: SetNull)
+  handicapGiver    Player? @relation("HandicapGiverReports", fields: [handicapGiverId], references: [id], onDelete: SetNull)
+  handicapReceiver Player? @relation("HandicapReceiverReports", fields: [handicapReceiverId], references: [id], onDelete: SetNull)
+  approvedMatch    Match? @relation("ApprovedMatch", fields: [approvedMatchId], references: [id], onDelete: SetNull)
+  approvedMatchId  String? @unique
+
+  @@index([status])
+  @@index([submittedById])
+  @@index([dateISO])
+}
+
+model AuditLog {
+  id        String      @id @default(cuid())
+  action    AuditAction
+  actorId   String?
+  targetId  String?
+  detail    String?
+  createdAt DateTime    @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+}

@@ -115,6 +115,53 @@ a:hover {
   background: rgba(37, 99, 235, 0.12);
 }
 
+.navButton {
+  font-family: inherit;
+}
+
+.authLayout {
+  min-height: calc(100vh - 180px);
+  display: grid;
+  place-items: center;
+}
+
+.authCard {
+  width: min(520px, 100%);
+}
+
+.settingsCard {
+  max-width: 680px;
+}
+
+.formStack {
+  display: grid;
+  gap: 12px;
+}
+
+.compactForm {
+  min-width: 260px;
+}
+
+.errorBox,
+.successBox {
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.errorBox {
+  border: 1px solid rgba(225, 29, 72, 0.28);
+  color: var(--danger);
+  background: rgba(225, 29, 72, 0.08);
+}
+
+.successBox {
+  border: 1px solid rgba(22, 163, 74, 0.28);
+  color: #15803d;
+  background: rgba(22, 163, 74, 0.08);
+}
+
 .h1 {
   font-size: 34px;
   margin: 0 0 10px 0;

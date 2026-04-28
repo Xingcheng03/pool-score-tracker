@@ -1021,7 +1021,6 @@ function calcRackStatsForPlayerHalf(playerId, matchesAll, mode) {
   const filtered = m === "all" ? matchesAll : matchesAll.filter((x) => x.tag === m);
 
   let effMatches = 0;   // 折算后的“总场”
-  let effWins = 0;      // 折算后的“胜场”（用于可信度展示可选）
   let racks = 0;
   let won = 0;
 
@@ -1048,11 +1047,6 @@ function calcRackStatsForPlayerHalf(playerId, matchesAll, mode) {
 
     // 可选：把“可信度”也用折算后的场次（更贴合你半场逻辑）
     effMatches += f;
-
-    // 统计胜负（折算后只用于 confidence 展示，你也可以不用）
-    if (match.winnerId) {
-      if (match.winnerId === playerId) effWins += f;
-    }
 
     if (match.tag === "live") { liveRacks += total * f; liveWon += my * f; }
     else { pracRacks += total * f; pracWon += my * f; }

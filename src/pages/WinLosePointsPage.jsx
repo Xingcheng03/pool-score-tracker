@@ -1,154 +1,52 @@
-﻿import React, { useMemo, useState } from "react";
-import { getMatches, getPlayers } from "../data/store.js";
+import React, { useCallback, useEffect, useState } from "react";
 import { INTERNAL_POINTS_NAME } from "../constants/labels.js";
+import { apiRequest, buildQuery } from "../lib/api.js";
 
-const BASE_POINTS = 1000;
 const WIN_POINTS = 20;
 const LOSE_POINTS = 15;
 const STREAK_BONUS = 10;
 
-function compareStr(a, b) {
-  return String(a).localeCompare(String(b), "zh-Hans-CN", { sensitivity: "base" });
-}
-
-function safeTime(iso) {
-  const t = new Date(iso).getTime();
-  return Number.isFinite(t) ? t : 0;
-}
-
 function fmtDate(iso) {
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleString();
+  return Number.isNaN(d.getTime()) ? "-" : d.toLocaleString();
 }
 
-function tierFromPoints(points) {
-  if (points >= 1400) return "王者";
-  if (points >= 1300) return "大师";
-  if (points >= 1200) return "钻石";
-  if (points >= 1100) return "铂金";
-  if (points >= 1000) return "黄金";
-  if (points >= 900) return "白银";
-  return "青铜";
-}
-
-function buildWinLoseRows(players, matches, opts = {}) {
-  const q = String(opts.q ?? "").trim().toLowerCase();
-  const cutoffMs = opts.cutoffISO ? safeTime(opts.cutoffISO) : Infinity;
-
-  const state = new Map(
-    players.map((p) => [
-      p.id,
-      {
-        id: p.id,
-        name: p.name ?? "Unknown",
-        points: BASE_POINTS,
-        wins: 0,
-        losses: 0,
-        played: 0,
-        winStreak: 0,
-        loseStreak: 0,
-        lastMatchISO: null,
-      },
-    ]),
-  );
-
-  const ordered = [...matches]
-    .filter((m) => safeTime(m.dateISO) <= cutoffMs)
-    .sort((a, b) => safeTime(a.dateISO) - safeTime(b.dateISO));
-
-  const logs = [];
-
-  for (const m of ordered) {
-    if (!m?.winnerId) continue;
-
-    const leftId = m.leftPlayerId;
-    const rightId = m.rightPlayerId;
-    const winnerId = m.winnerId;
-    const loserId = winnerId === leftId ? rightId : winnerId === rightId ? leftId : null;
-
-    if (!winnerId || !loserId) continue;
-
-    const winner = state.get(winnerId);
-    const loser = state.get(loserId);
-    if (!winner || !loser) continue;
-
-    winner.played += 1;
-    loser.played += 1;
-    winner.wins += 1;
-    loser.losses += 1;
-
-    winner.winStreak += 1;
-    winner.loseStreak = 0;
-    loser.loseStreak += 1;
-    loser.winStreak = 0;
-
-    let winnerDelta = WIN_POINTS;
-    let loserDelta = -LOSE_POINTS;
-
-    if (winner.winStreak % 3 === 0) winnerDelta += STREAK_BONUS;
-    if (loser.loseStreak % 3 === 0) loserDelta -= STREAK_BONUS;
-
-    winner.points += winnerDelta;
-    loser.points += loserDelta;
-
-    winner.lastMatchISO = m.dateISO;
-    loser.lastMatchISO = m.dateISO;
-
-    logs.push({
-      id: m.id,
-      dateISO: m.dateISO,
-      matchName: m.matchName ?? "未命名比赛",
-      winnerId,
-      loserId,
-      winnerDelta,
-      loserDelta,
-      winnerStreak: winner.winStreak,
-      loserStreak: loser.loseStreak,
-    });
-  }
-
-  let rows = [...state.values()].map((r) => ({
-    ...r,
-    tier: tierFromPoints(r.points),
-  }));
-
-  if (q) {
-    rows = rows.filter((r) => r.name.toLowerCase().includes(q));
-  }
-
-  rows.sort((a, b) => {
-    if (b.points !== a.points) return b.points - a.points;
-    if (b.wins !== a.wins) return b.wins - a.wins;
-    if (a.losses !== b.losses) return a.losses - b.losses;
-    return compareStr(a.name, b.name);
-  });
-
-  return {
-    rows,
-    logs,
-    totalMatchesInRange: ordered.length,
-    countedMatches: logs.length,
-  };
+function playerName(players, id) {
+  return players.find((player) => player.id === id)?.name ?? "Unknown";
 }
 
 export default function WinLosePointsPage() {
-  const [tick, setTick] = useState(0);
   const [q, setQ] = useState("");
   const [cutoffLocal, setCutoffLocal] = useState("");
-
-  const players = useMemo(() => getPlayers(), [tick]);
-  const matches = useMemo(() => getMatches("all"), [tick]);
+  const [players, setPlayers] = useState([]);
+  const [computed, setComputed] = useState({ rows: [], logs: [], totalMatchesInRange: 0, countedMatches: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const cutoffISO = cutoffLocal ? new Date(cutoffLocal).toISOString() : "";
 
-  const computed = useMemo(() => {
-    return buildWinLoseRows(players, matches, { q, cutoffISO });
-  }, [players, matches, q, cutoffISO]);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [pointsResult, playerResult] = await Promise.all([
+        apiRequest(`/leaderboard/win-lose${buildQuery({ q, cutoffISO })}`),
+        apiRequest("/players"),
+      ]);
+      setComputed(pointsResult);
+      setPlayers(playerResult.players);
+    } catch (err) {
+      setError(err?.message ?? String(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [q, cutoffISO]);
 
-  const logsDesc = useMemo(() => {
-    return [...computed.logs].sort((a, b) => safeTime(b.dateISO) - safeTime(a.dateISO)).slice(0, 40);
-  }, [computed.logs]);
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const logsDesc = [...computed.logs].sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime()).slice(0, 40);
 
   return (
     <div>
@@ -156,31 +54,18 @@ export default function WinLosePointsPage() {
         <div>
           <h2 style={{ margin: 0 }}>胜负积分榜（非{INTERNAL_POINTS_NAME}）</h2>
           <div style={{ color: "var(--muted)", fontSize: 13, marginTop: 6 }}>
-            全部比赛按日期顺序结算：胜 +{WIN_POINTS}，负 -{LOSE_POINTS}，连胜/连败每满 3 场额外 ±{STREAK_BONUS}
+            后端按原页面逻辑计算：胜 +{WIN_POINTS}，负 -{LOSE_POINTS}，连胜/连败每满 3 场额外 ±{STREAK_BONUS}
           </div>
         </div>
       </div>
 
       <div className="card" style={{ marginTop: 12 }}>
         <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr auto", gap: 10 }}>
-          <input
-            className="input"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="搜索球员"
-          />
-
-          <input
-            className="input"
-            type="datetime-local"
-            value={cutoffLocal}
-            onChange={(e) => setCutoffLocal(e.target.value)}
-            title="截止日期（为空=统计全部）"
-          />
-
+          <input className="input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="搜索球员" />
+          <input className="input" type="datetime-local" value={cutoffLocal} onChange={(e) => setCutoffLocal(e.target.value)} title="截止日期（为空=统计全部）" />
           <div className="row" style={{ gap: 8 }}>
             <button className="btn" type="button" onClick={() => setCutoffLocal("")}>清空截止日期</button>
-            <button className="btn" type="button" onClick={() => setTick((t) => t + 1)}>刷新</button>
+            <button className="btn" type="button" onClick={load}>刷新</button>
           </div>
         </div>
 
@@ -190,79 +75,82 @@ export default function WinLosePointsPage() {
         </div>
       </div>
 
-      <div className="card" style={{ marginTop: 12, padding: 0, overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead style={{ background: "var(--soft)" }}>
-            <tr>
-              <th style={{ padding: 12 }}>#</th>
-              <th style={{ padding: 12 }}>球员</th>
-              <th style={{ padding: 12 }}>积分</th>
-              <th style={{ padding: 12 }}>段位</th>
-              <th style={{ padding: 12 }}>战绩</th>
-              <th style={{ padding: 12 }}>当前连击</th>
-              <th style={{ padding: 12 }}>最后比赛时间</th>
-            </tr>
-          </thead>
-          <tbody>
-            {computed.rows.length === 0 ? (
-              <tr>
-                <td colSpan={7} style={{ padding: 16, color: "var(--muted)" }}>暂无数据</td>
-              </tr>
-            ) : (
-              computed.rows.map((r, idx) => {
-                const streak = r.winStreak > 0 ? `连胜 ${r.winStreak}` : r.loseStreak > 0 ? `连败 ${r.loseStreak}` : "-";
-                return (
-                  <tr key={r.id} style={{ borderBottom: "1px solid var(--line)" }}>
-                    <td style={{ padding: 12 }}>{idx + 1}</td>
-                    <td style={{ padding: 12, fontWeight: 700 }}>{r.name}</td>
-                    <td style={{ padding: 12, fontWeight: 700 }}>{r.points}</td>
-                    <td style={{ padding: 12 }}>{r.tier}</td>
-                    <td style={{ padding: 12 }}>{r.wins}胜 {r.losses}负</td>
-                    <td style={{ padding: 12 }}>{streak}</td>
-                    <td style={{ padding: 12 }}>{r.lastMatchISO ? fmtDate(r.lastMatchISO) : "-"}</td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+      {error && <div className="errorBox" style={{ marginTop: 12 }}>{error}</div>}
+      {loading ? (
+        <div className="card" style={{ marginTop: 12 }}>加载中...</div>
+      ) : (
+        <>
+          <div className="card" style={{ marginTop: 12, padding: 0, overflow: "hidden" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead style={{ background: "var(--soft)" }}>
+                <tr>
+                  <th>#</th>
+                  <th>球员</th>
+                  <th>积分</th>
+                  <th>段位</th>
+                  <th>战绩</th>
+                  <th>当前连击</th>
+                  <th>最后比赛时间</th>
+                </tr>
+              </thead>
+              <tbody>
+                {computed.rows.length === 0 ? (
+                  <tr><td colSpan={7} style={{ color: "var(--muted)" }}>暂无数据</td></tr>
+                ) : (
+                  computed.rows.map((row, idx) => {
+                    const streak = row.winStreak > 0 ? `连胜 ${row.winStreak}` : row.loseStreak > 0 ? `连败 ${row.loseStreak}` : "-";
+                    return (
+                      <tr key={row.id}>
+                        <td>{idx + 1}</td>
+                        <td style={{ fontWeight: 700 }}>{row.name}</td>
+                        <td style={{ fontWeight: 700 }}>{row.points}</td>
+                        <td>{row.tier}</td>
+                        <td>{row.wins}胜 {row.losses}负</td>
+                        <td>{streak}</td>
+                        <td>{row.lastMatchISO ? fmtDate(row.lastMatchISO) : "-"}</td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
 
-      <div className="card" style={{ marginTop: 12, padding: 0, overflow: "hidden" }}>
-        <div style={{ padding: 14, borderBottom: "1px solid var(--line)", fontWeight: 900 }}>最近 40 场积分变动</div>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead style={{ background: "var(--soft)" }}>
-            <tr>
-              <th style={{ padding: 12 }}>时间</th>
-              <th style={{ padding: 12 }}>比赛</th>
-              <th style={{ padding: 12 }}>胜者变化</th>
-              <th style={{ padding: 12 }}>败者变化</th>
-            </tr>
-          </thead>
-          <tbody>
-            {logsDesc.length === 0 ? (
-              <tr>
-                <td colSpan={4} style={{ padding: 16, color: "var(--muted)" }}>暂无可展示的比赛记录</td>
-              </tr>
-            ) : (
-              logsDesc.map((x) => {
-                const winner = players.find((p) => p.id === x.winnerId)?.name ?? "Unknown";
-                const loser = players.find((p) => p.id === x.loserId)?.name ?? "Unknown";
-                const winnerExtra = x.winnerStreak % 3 === 0 ? "（连胜奖励）" : "";
-                const loserExtra = x.loserStreak % 3 === 0 ? "（连败惩罚）" : "";
-                return (
-                  <tr key={x.id} style={{ borderBottom: "1px solid var(--line)" }}>
-                    <td style={{ padding: 12 }}>{fmtDate(x.dateISO)}</td>
-                    <td style={{ padding: 12 }}>{x.matchName}</td>
-                    <td style={{ padding: 12, color: "var(--primary)" }}>{winner} +{x.winnerDelta} {winnerExtra}</td>
-                    <td style={{ padding: 12, color: "var(--danger)" }}>{loser} {x.loserDelta} {loserExtra}</td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+          <div className="card" style={{ marginTop: 12, padding: 0, overflow: "hidden" }}>
+            <div style={{ padding: 14, borderBottom: "1px solid var(--line)", fontWeight: 900 }}>最近 40 场积分变动</div>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead style={{ background: "var(--soft)" }}>
+                <tr>
+                  <th>时间</th>
+                  <th>比赛</th>
+                  <th>胜者变化</th>
+                  <th>败者变化</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logsDesc.length === 0 ? (
+                  <tr><td colSpan={4} style={{ color: "var(--muted)" }}>暂无可展示的比赛记录</td></tr>
+                ) : (
+                  logsDesc.map((log) => {
+                    const winner = playerName(players, log.winnerId);
+                    const loser = playerName(players, log.loserId);
+                    const winnerExtra = log.winnerStreak % 3 === 0 ? "（连胜奖励）" : "";
+                    const loserExtra = log.loserStreak % 3 === 0 ? "（连败惩罚）" : "";
+                    return (
+                      <tr key={log.id}>
+                        <td>{fmtDate(log.dateISO)}</td>
+                        <td>{log.matchName}</td>
+                        <td style={{ color: "var(--primary)" }}>{winner} +{log.winnerDelta} {winnerExtra}</td>
+                        <td style={{ color: "var(--danger)" }}>{loser} {log.loserDelta} {loserExtra}</td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 }
