@@ -100,6 +100,82 @@ function compactPromptContext(context, baseline) {
   };
 }
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function matchDisplayLabel(match, playerMap) {
+  const leftName = playerMap.get(match.leftPlayerId) ?? "左侧球员";
+  const rightName = playerMap.get(match.rightPlayerId) ?? "右侧球员";
+  const score = `${match.leftScore} - ${match.rightScore}`;
+  return `${match.matchName ?? "这场比赛"}（${leftName} ${score} ${rightName}）`;
+}
+
+function buildMatchIdLabelMap(context) {
+  const seen = new Set();
+  const sourceMatches = [];
+
+  for (const match of [
+    ...(Array.isArray(context.matches) ? context.matches : []),
+    ...(Array.isArray(context.evidenceMatches) ? context.evidenceMatches : []),
+  ]) {
+    if (!match?.id || seen.has(match.id)) continue;
+    seen.add(match.id);
+    sourceMatches.push(match);
+  }
+
+  return new Map(
+    sourceMatches
+      .filter((match) => match?.id)
+      .map((match) => [match.id, matchDisplayLabel(match, context.playerMap)]),
+  );
+}
+
+function replaceVisibleMatchIds(value, context) {
+  if (value == null) return value;
+
+  let text = String(value);
+  const idLabels = buildMatchIdLabelMap(context);
+
+  for (const [matchId, label] of idLabels.entries()) {
+    const pattern = new RegExp(`(?:比赛\\s*ID\\s*[:：]?\\s*)?${escapeRegExp(matchId)}`, "g");
+    text = text.replace(pattern, label);
+  }
+
+  return text;
+}
+
+function sanitizeAnalysisForDisplay(analysis, context) {
+  if (!analysis || typeof analysis !== "object") return analysis;
+  const clean = (value) => replaceVisibleMatchIds(value, context);
+
+  return {
+    ...analysis,
+    summary: clean(analysis.summary),
+    playerForm: clean(analysis.playerForm),
+    rankingSuggestion: clean(analysis.rankingSuggestion),
+    recommendedOpponent: analysis.recommendedOpponent && typeof analysis.recommendedOpponent === "object"
+      ? {
+        ...analysis.recommendedOpponent,
+        reason: clean(analysis.recommendedOpponent.reason),
+      }
+      : analysis.recommendedOpponent,
+    headToHead: analysis.headToHead && typeof analysis.headToHead === "object"
+      ? {
+        ...analysis.headToHead,
+        rationale: clean(analysis.headToHead.rationale),
+      }
+      : analysis.headToHead,
+    cautions: Array.isArray(analysis.cautions) ? analysis.cautions.map(clean) : analysis.cautions,
+    evidence: Array.isArray(analysis.evidence)
+      ? analysis.evidence.map((item) => ({
+        ...item,
+        reason: clean(item.reason),
+      }))
+      : analysis.evidence,
+  };
+}
+
 function buildPrompt(context, baseline) {
   const promptContext = compactPromptContext(context, baseline);
 
@@ -111,6 +187,7 @@ Rules:
 - Use only the provided JSON data.
 - Do not invent players, matches, scores, ratings, or rankings.
 - Evidence citations must use match IDs from evidenceMatches only.
+- Never expose raw match IDs in any user-facing text. Use opponent names, match names, scores, dates, and win/loss instead.
 - Player reports must discuss all historical matches, recent 5 match dates, activity frequency, score margins, rating delta trend, and next-visit form outlook.
 - Matchup reports must explain predicted win rates using direct matches, shared opponents, and recent form from match records. Do not use leaderboard rank as the reason for win probability.
 - Opponent recommendations must explain three categories: balanced_match/even opponents, challenge/stronger opponents, and stabilize/weaker opponents.
@@ -162,7 +239,7 @@ function makeResponse({ context, baseline, analysis, source, model, fallbackReas
     generatedAt: new Date().toISOString(),
     contextSummary: context.contextSummary,
     baseline,
-    analysis,
+    analysis: sanitizeAnalysisForDisplay(analysis, context),
     evidence: context.evidence,
     fallbackReason,
   };

@@ -21,26 +21,18 @@ const CONFIDENCE_LABELS = {
   high: "高",
 };
 
-const AI_REPORT_STORAGE_KEY = "pool-score-tracker-ai-reports-v1";
+const TAB_REPORT_TYPES = {
+  player: "player_analysis",
+  matchup: "matchup_analysis",
+  recommendation: "opponent_recommendation",
+};
 
-function readSavedReports() {
-  try {
-    const raw = localStorage.getItem(AI_REPORT_STORAGE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
-function writeSavedReports(reports) {
-  try {
-    localStorage.setItem(AI_REPORT_STORAGE_KEY, JSON.stringify(reports));
-  } catch {
-    // Ignore storage failures so report generation still works.
-  }
-}
+const EMPTY_REPORT_STATE = {
+  cycle: null,
+  quota: {},
+  reports: {},
+  reportHistory: {},
+};
 
 function formatDate(iso) {
   const date = new Date(iso);
@@ -64,6 +56,135 @@ function playerName(players, id) {
 
 function sourceLabel(source) {
   return source === "gemini" ? "Gemini" : "规则 baseline";
+}
+
+function reportTypeLabel(reportType) {
+  if (reportType === TAB_REPORT_TYPES.player) return "球员状态报告";
+  if (reportType === TAB_REPORT_TYPES.matchup) return "对阵分析报告";
+  if (reportType === TAB_REPORT_TYPES.recommendation) return "推荐对手报告";
+  return "AI 报告";
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function listItems(items) {
+  if (!Array.isArray(items) || items.length === 0) return "";
+  return `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
+}
+
+function buildPrintableReportHtml(result, players) {
+  const analysis = result?.analysis ?? {};
+  const baseline = result?.baseline ?? {};
+  const reportType = result?.reportMeta?.reportType ?? result?.task;
+  const title = reportTypeLabel(reportType);
+  const generatedAt = formatDate(result?.reportMeta?.generatedAt ?? result?.generatedAt);
+  const recommendedName = analysis.recommendedOpponent?.playerId ? playerName(players, analysis.recommendedOpponent.playerId) : "";
+  const advantageName = analysis.headToHead?.advantagePlayerId ? playerName(players, analysis.headToHead.advantagePlayerId) : "";
+  const evidenceMatches = result?.evidence?.matches ?? [];
+
+  const recentRows = Array.isArray(baseline.recentFive)
+    ? baseline.recentFive.map((match) => `
+      <tr>
+        <td>${escapeHtml(formatDate(match.dateISO))}</td>
+        <td>${escapeHtml(match.opponentName)}</td>
+        <td>${escapeHtml(`${match.myScore} : ${match.opponentScore}`)}</td>
+        <td>${escapeHtml(match.result === "win" ? "赢" : match.result === "loss" ? "输" : "-")}</td>
+      </tr>
+    `).join("")
+    : "";
+
+  const scoreDeltaRows = Array.isArray(baseline.scoreDeltaTable)
+    ? baseline.scoreDeltaTable.flatMap((group) => group.scorelines.map((row) => {
+      const [playerScore, opponentScore] = String(row.score).split("-");
+      return `
+        <tr>
+          <td>抢 ${escapeHtml(group.raceTo)}</td>
+          <td>${row.playerDelta > 0 ? "+" : ""}${escapeHtml(row.playerDelta)}</td>
+          <td>${escapeHtml(`${baseline.matchupModel?.playerName ?? ""} ${playerScore} - ${opponentScore} ${baseline.matchupModel?.opponentName ?? ""}`)}</td>
+          <td>${row.opponentDelta > 0 ? "+" : ""}${escapeHtml(row.opponentDelta)}</td>
+        </tr>
+      `;
+    })).join("")
+    : "";
+
+  const recommendationSections = Array.isArray(baseline.recommendationCategories)
+    ? baseline.recommendationCategories.map((category) => `
+      <h2>${escapeHtml(category.label)}</h2>
+      <p>${escapeHtml(category.description)}</p>
+      ${listItems((category.items ?? []).map((item) => `${item.opponentName}：你的胜率 ${formatPercent(item.playerWinProbability / 100)}，共同对手 ${item.commonOpponents?.length ?? 0} 个`))}
+    `).join("")
+    : "";
+
+  const evidenceRows = evidenceMatches.map((match) => `
+    <tr>
+      <td>${escapeHtml(formatDate(match.dateISO))}</td>
+      <td>${escapeHtml(match.matchName)}</td>
+      <td>${escapeHtml(`${match.leftPlayerName} ${match.leftScore} : ${match.rightScore} ${match.rightPlayerName}`)}</td>
+      <td>${escapeHtml(match.winnerName ?? "-")}</td>
+    </tr>
+  `).join("");
+
+  return `<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(title)}-${escapeHtml(generatedAt)}</title>
+  <style>
+    body { font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif; color: #172033; margin: 28px; line-height: 1.65; }
+    h1 { font-size: 26px; margin: 0 0 6px; }
+    h2 { font-size: 18px; margin: 24px 0 8px; padding-bottom: 6px; border-bottom: 1px solid #dfe6f0; }
+    .meta { color: #68758a; font-size: 13px; margin-bottom: 18px; }
+    .summary { border-left: 4px solid #2158f5; background: #f2f6ff; padding: 12px 14px; border-radius: 10px; font-weight: 700; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 14px 0; }
+    .metric { border: 1px solid #dfe6f0; border-radius: 10px; padding: 10px 12px; }
+    .metric span { display: block; color: #68758a; font-size: 12px; }
+    .metric strong { display: block; font-size: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }
+    th, td { border: 1px solid #dfe6f0; padding: 8px; text-align: left; vertical-align: top; }
+    th { background: #f2f6ff; }
+    ul { margin-top: 8px; }
+    @media print { body { margin: 18mm; } .no-print { display: none; } }
+  </style>
+</head>
+<body>
+  <button class="no-print" onclick="window.print()" style="margin-bottom:16px;padding:9px 14px;border:1px solid #dfe6f0;border-radius:8px;background:#2158f5;color:white;font-weight:700;">保存为 PDF</button>
+  <h1>${escapeHtml(title)}</h1>
+  <div class="meta">生成时间：${escapeHtml(generatedAt)} · 来源：${escapeHtml(sourceLabel(result?.source))}</div>
+  <div class="summary">${escapeHtml(analysis.summary)}</div>
+  <div class="grid">
+    ${recommendedName ? `<div class="metric"><span>推荐对手</span><strong>${escapeHtml(recommendedName)}</strong></div>` : ""}
+    ${advantageName ? `<div class="metric"><span>对阵优势</span><strong>${escapeHtml(advantageName)}</strong></div>` : ""}
+    ${result?.contextSummary?.matchCount != null ? `<div class="metric"><span>全量比赛</span><strong>${escapeHtml(result.contextSummary.matchCount)}</strong></div>` : ""}
+    ${result?.contextSummary?.evidenceMatchCount != null ? `<div class="metric"><span>证据比赛</span><strong>${escapeHtml(result.contextSummary.evidenceMatchCount)}</strong></div>` : ""}
+  </div>
+  ${analysis.recommendedOpponent?.reason ? `<h2>推荐理由</h2><p>${escapeHtml(analysis.recommendedOpponent.reason)}</p>` : ""}
+  ${analysis.headToHead?.rationale ? `<h2>对阵判断</h2><p>${escapeHtml(analysis.headToHead.rationale)}</p>` : ""}
+  ${analysis.rankingSuggestion ? `<h2>排名建议</h2><p>${escapeHtml(analysis.rankingSuggestion)}</p>` : ""}
+  ${Array.isArray(analysis.cautions) && analysis.cautions.length ? `<h2>注意事项</h2>${listItems(analysis.cautions)}` : ""}
+  ${recentRows ? `<h2>最近 5 场</h2><table><thead><tr><th>日期</th><th>对手</th><th>比分</th><th>结果</th></tr></thead><tbody>${recentRows}</tbody></table>` : ""}
+  ${scoreDeltaRows ? `<h2>街灯榜积分变化估算</h2><table><thead><tr><th>赛制</th><th>我方</th><th>比分</th><th>对手</th></tr></thead><tbody>${scoreDeltaRows}</tbody></table>` : ""}
+  ${recommendationSections}
+  ${evidenceRows ? `<h2>证据比赛</h2><table><thead><tr><th>时间</th><th>比赛</th><th>比分</th><th>胜者</th></tr></thead><tbody>${evidenceRows}</tbody></table>` : ""}
+  <script>window.addEventListener("load", () => setTimeout(() => window.print(), 250));</script>
+</body>
+</html>`;
+}
+
+function downloadReportPdf(result, players) {
+  if (!result) return;
+  const html = buildPrintableReportHtml(result, players);
+  const popup = window.open("", "_blank");
+  if (!popup) return;
+  popup.document.open();
+  popup.document.write(html);
+  popup.document.close();
 }
 
 function ConfidenceBadge({ value }) {
@@ -114,6 +235,48 @@ function ReadonlyField({ label, value, hint }) {
       <div className="aiReadonlyField">
         <strong>{value || "未绑定球员"}</strong>
         {hint && <em>{hint}</em>}
+      </div>
+    </div>
+  );
+}
+
+function QuotaPanel({ quota, cycle, activeTab }) {
+  const reportType = TAB_REPORT_TYPES[activeTab];
+  const item = quota?.[reportType];
+  if (!item) return null;
+
+  const cycleText = cycle?.latestMatch
+    ? `本周期从 ${cycle.latestMatch.matchName} 通过后开始`
+    : "当前球员暂无已通过比赛，本周期从账号绑定球员开始";
+
+  return (
+    <div className="aiQuotaPanel">
+      <div>
+        <strong>{item.label}</strong>
+        <span>本周期已用 {item.used}/{item.limit}，剩余 {item.remaining}</span>
+      </div>
+      <em>{cycleText}</em>
+    </div>
+  );
+}
+
+function ReportHistorySelector({ reports, selectedIndex, onSelect }) {
+  if (!Array.isArray(reports) || reports.length <= 1) return null;
+
+  return (
+    <div className="aiReportHistory">
+      <span>本周期报告记录</span>
+      <div>
+        {reports.map((report, index) => (
+          <button
+            key={report.reportMeta?.id ?? `${report.generatedAt}-${index}`}
+            className={index === selectedIndex ? "pill pillActive" : "pill"}
+            type="button"
+            onClick={() => onSelect(index)}
+          >
+            第 {reports.length - index} 份 · {formatDate(report.reportMeta?.generatedAt ?? report.generatedAt)}
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -556,11 +719,11 @@ function EvidenceTable({ result }) {
   );
 }
 
-function ResultPanel({ result, players }) {
+function ResultPanel({ result, players, onDownloadPdf }) {
   if (!result) {
     return (
       <div className="card aiEmptyState">
-        点击生成分析后，报告会一直保存在这里；需要更新时再点重新生成。
+        点击生成分析后，报告会保存到服务器。本周期额度用完后，需要等下一场比赛通过审核再生成。
       </div>
     );
   }
@@ -578,7 +741,12 @@ function ResultPanel({ result, players }) {
             <ConfidenceBadge value={analysis.confidence} />
             {analysis.baselineAgreement && <span className="badge">Baseline：{analysis.baselineAgreement}</span>}
           </div>
-          <span className="smallMuted">{formatDate(result.generatedAt)}</span>
+          <div className="aiResultActions">
+            <span className="smallMuted">生成时间：{formatDate(result.reportMeta?.generatedAt ?? result.generatedAt)}</span>
+            <button className="btn aiPdfButton" type="button" onClick={onDownloadPdf}>
+              下载 PDF
+            </button>
+          </div>
         </div>
 
         {result.source === "baseline_fallback" && (
@@ -643,24 +811,35 @@ export default function AiAnalysisPage() {
   const [players, setPlayers] = useState([]);
   const [activeTab, setActiveTab] = useState("player");
   const [opponentId, setOpponentId] = useState("");
-  const [savedReports, setSavedReports] = useState(readSavedReports);
+  const [reportState, setReportState] = useState(EMPTY_REPORT_STATE);
+  const [selectedReportIndex, setSelectedReportIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [error, setError] = useState("");
 
   const currentPlayerId = user?.player?.id ?? "";
   const currentPlayerName = user?.player?.name || (currentPlayerId ? playerName(players, currentPlayerId) : "");
-  const activeReport = savedReports[activeTab]?.result ?? null;
+  const activeReportType = TAB_REPORT_TYPES[activeTab];
+  const activeReportHistory = reportState.reportHistory?.[activeReportType] ?? [];
+  const activeReport = activeReportHistory[selectedReportIndex] ?? reportState.reports?.[activeReportType] ?? null;
+  const activeQuota = reportState.quota?.[activeReportType] ?? null;
   const hasActiveReport = Boolean(activeReport);
-  const savedMatchupOpponentId = savedReports.matchup?.input?.opponentId ?? "";
-  const savedMatchupPlayerId = savedReports.matchup?.input?.playerId ?? "";
+  const quotaBlocked = Boolean(activeQuota && activeQuota.remaining <= 0);
+  const savedMatchupOpponentId = activeReportType === TAB_REPORT_TYPES.matchup
+    ? activeReport?.reportMeta?.opponentId ?? ""
+    : reportState.reports?.[TAB_REPORT_TYPES.matchup]?.reportMeta?.opponentId ?? "";
+  const savedMatchupPlayerId = reportState.reports?.[TAB_REPORT_TYPES.matchup]?.reportMeta?.playerId ?? "";
 
   const loadBaseData = useCallback(async () => {
     setPageLoading(true);
     setError("");
     try {
-      const playerResult = await cachedApiRequest("/players");
+      const [playerResult, reportResult] = await Promise.all([
+        cachedApiRequest("/players"),
+        apiRequest("/ai/reports"),
+      ]);
       setPlayers(playerResult.players);
+      setReportState(reportResult);
     } catch (err) {
       setError(err?.message ?? String(err));
     } finally {
@@ -671,10 +850,6 @@ export default function AiAnalysisPage() {
   useEffect(() => {
     loadBaseData();
   }, [loadBaseData]);
-
-  useEffect(() => {
-    writeSavedReports(savedReports);
-  }, [savedReports]);
 
   useEffect(() => {
     if (!currentPlayerId) {
@@ -694,22 +869,28 @@ export default function AiAnalysisPage() {
     }
   }, [activeTab, currentPlayerId, opponentId, savedMatchupOpponentId, savedMatchupPlayerId]);
 
+  useEffect(() => {
+    setSelectedReportIndex(0);
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (selectedReportIndex > 0 && selectedReportIndex >= activeReportHistory.length) {
+      setSelectedReportIndex(0);
+    }
+  }, [activeReportHistory.length, selectedReportIndex]);
+
   const canSubmit = useMemo(() => {
     if (!currentPlayerId) return false;
+    if (quotaBlocked) return false;
     if (activeTab === "matchup") return Boolean(opponentId && opponentId !== currentPlayerId);
     return true;
-  }, [activeTab, currentPlayerId, opponentId]);
+  }, [activeTab, currentPlayerId, opponentId, quotaBlocked]);
 
   async function generateAnalysis() {
     if (!canSubmit) return;
 
     setLoading(true);
     setError("");
-    setSavedReports((current) => {
-      const next = { ...current };
-      delete next[activeTab];
-      return next;
-    });
 
     try {
       let path = "/ai/player-analysis";
@@ -728,14 +909,10 @@ export default function AiAnalysisPage() {
         body: jsonBody(body),
       });
 
-      setSavedReports((current) => ({
-        ...current,
-        [activeTab]: {
-          input: body,
-          result: nextResult,
-          savedAt: new Date().toISOString(),
-        },
-      }));
+      if (nextResult.quotaState) {
+        setReportState(nextResult.quotaState);
+        setSelectedReportIndex(0);
+      }
     } catch (err) {
       setError(err?.message ?? String(err));
     } finally {
@@ -748,7 +925,7 @@ export default function AiAnalysisPage() {
       <div className="pageTitle">
         <div>
           <h1 className="h1">AI 分析</h1>
-          <p className="sub">默认使用当前登录账号绑定的球员，生成后的报告会保存在本机。</p>
+          <p className="sub">默认使用当前登录账号绑定的球员，报告保存到服务器，并按下一场已通过比赛自动重置额度。</p>
         </div>
       </div>
 
@@ -783,10 +960,13 @@ export default function AiAnalysisPage() {
 
           <div className="aiSubmitWrap">
             <button className="btn btnBrand aiSubmitButton" type="button" onClick={generateAnalysis} disabled={!canSubmit || loading || pageLoading}>
-              {loading ? "生成中..." : hasActiveReport ? "重新生成" : "生成分析"}
+              {loading ? "生成中..." : quotaBlocked ? "本周期已用完" : hasActiveReport ? "再生成一份" : "生成分析"}
             </button>
           </div>
         </div>
+
+        <QuotaPanel quota={reportState.quota} cycle={reportState.cycle} activeTab={activeTab} />
+        <ReportHistorySelector reports={activeReportHistory} selectedIndex={selectedReportIndex} onSelect={setSelectedReportIndex} />
       </div>
 
       {!currentPlayerId && !pageLoading && (
@@ -796,7 +976,7 @@ export default function AiAnalysisPage() {
       {pageLoading ? (
         <div className="card">加载中...</div>
       ) : (
-        <ResultPanel result={activeReport} players={players} />
+        <ResultPanel result={activeReport} players={players} onDownloadPdf={() => downloadReportPdf(activeReport, players)} />
       )}
     </div>
   );
