@@ -47,35 +47,42 @@ export default function AccountSettingsForm({ compact = false }) {
   if (compact) {
     return (
       <form onSubmit={onSubmit} className="accountInlineForm">
-        <input
-          className="input accountInlineInput"
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
-          placeholder="用户名"
-          aria-label="用户名"
-          autoComplete="username"
-        />
-        <input
-          className="input accountInlineInput"
-          type="password"
-          value={currentPassword}
-          onChange={(event) => setCurrentPassword(event.target.value)}
-          placeholder="当前密码"
-          aria-label="当前密码"
-          autoComplete="current-password"
-        />
-        <input
-          className="input accountInlineInput"
-          type="password"
-          value={newPassword}
-          onChange={(event) => setNewPassword(event.target.value)}
-          placeholder="新密码"
-          aria-label="新密码"
-          autoComplete="new-password"
-        />
+        <label className="accountInlineField">
+          <span className="accountInlineLabel">用户名：</span>
+          <input
+            className="input accountInlineInput"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            placeholder="用户名"
+            autoComplete="username"
+          />
+        </label>
+        <label className="accountInlineField">
+          <span className="accountInlineLabel">当前密码：</span>
+          <input
+            className="input accountInlineInput"
+            type="password"
+            value={currentPassword}
+            onChange={(event) => setCurrentPassword(event.target.value)}
+            placeholder="当前密码"
+            autoComplete="current-password"
+          />
+        </label>
+        <label className="accountInlineField">
+          <span className="accountInlineLabel">新密码：</span>
+          <input
+            className="input accountInlineInput"
+            type="password"
+            value={newPassword}
+            onChange={(event) => setNewPassword(event.target.value)}
+            placeholder="新密码"
+            autoComplete="new-password"
+          />
+        </label>
         <button className="btn btnBrand accountInlineSave" type="submit" disabled={saving}>
           {saving ? "保存中..." : "保存"}
         </button>
+        <div className="accountInlineNote">用户名只用作登录，不等于球员名称。</div>
         {(message || error) && (
           <div className={error ? "accountInlineMessage isError" : "accountInlineMessage"}>
             {error || message}
@@ -93,17 +100,18 @@ export default function AccountSettingsForm({ compact = false }) {
       </div>
 
       <div>
-        <div className="smallMuted">用户名</div>
+        <div className="smallMuted">用户名：</div>
         <input className="input" value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" />
+        <div className="accountFieldNote">用户名只用作登录，不等于球员名称。</div>
       </div>
 
       <div>
-        <div className="smallMuted">当前密码</div>
+        <div className="smallMuted">当前密码：</div>
         <input className="input" type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} autoComplete="current-password" />
       </div>
 
       <div>
-        <div className="smallMuted">新密码</div>
+        <div className="smallMuted">新密码：</div>
         <input className="input" type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} autoComplete="new-password" />
       </div>
 

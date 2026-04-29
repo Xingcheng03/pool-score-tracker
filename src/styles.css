@@ -196,15 +196,30 @@ a:hover {
 .accountInlineForm {
   flex: 1 1 620px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(160px, 1fr)) auto;
+  grid-template-columns: repeat(3, minmax(210px, 1fr)) auto;
   gap: 10px;
   align-items: center;
-  max-width: 740px;
+  max-width: 880px;
   padding: 8px;
   border: 1px solid rgba(223, 230, 240, 0.7);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.62);
   box-shadow: var(--shadowSoft);
+}
+
+.accountInlineField {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.accountInlineLabel {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
 .accountInlineInput {
@@ -225,6 +240,23 @@ a:hover {
   font-size: 12px;
   font-weight: 900;
   line-height: 1.4;
+}
+
+.accountInlineNote,
+.accountFieldNote {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.accountInlineNote {
+  grid-column: 1 / -1;
+  margin-top: -2px;
+}
+
+.accountFieldNote {
+  margin-top: 6px;
 }
 
 .accountInlineMessage.isError {
