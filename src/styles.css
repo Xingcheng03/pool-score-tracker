@@ -180,14 +180,6 @@ a:hover {
   width: 100%;
 }
 
-.authSwitchRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin-top: 14px;
-}
-
 .settingsCard {
   max-width: 680px;
 }
@@ -1653,17 +1645,6 @@ tbody tr:hover td {
     box-shadow: 0 14px 30px rgba(33, 88, 245, 0.22);
   }
 
-  .authSwitchRow {
-    margin-top: 16px;
-    align-items: center;
-  }
-
-  .authSwitchButton {
-    min-height: 48px;
-    border-radius: 16px;
-    padding-inline: 16px;
-    background: #ffffff;
-  }
 }
 
 .bigScore {

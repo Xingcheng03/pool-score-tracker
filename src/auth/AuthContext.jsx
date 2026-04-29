@@ -42,16 +42,6 @@ export function AuthProvider({ children }) {
     return result.user;
   }
 
-  async function register(username, password, playerName) {
-    const result = await apiRequest("/auth/register", {
-      method: "POST",
-      body: jsonBody({ username, password, playerName }),
-    });
-    setToken(result.token);
-    setUser(result.user);
-    return result.user;
-  }
-
   async function updateMe(payload) {
     const result = await apiRequest("/auth/me", {
       method: "PATCH",
@@ -73,7 +63,6 @@ export function AuthProvider({ children }) {
       isAuthenticated: Boolean(user),
       isAdmin: user?.role === "ADMIN",
       login,
-      register,
       updateMe,
       logout,
     }),

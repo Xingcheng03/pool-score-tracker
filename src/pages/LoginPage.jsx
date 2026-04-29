@@ -3,13 +3,11 @@ import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/useAuth.js";
 
 export default function LoginPage() {
-  const { isAuthenticated, login, register } = useAuth();
+  const { isAuthenticated, login } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [mode, setMode] = useState("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [playerName, setPlayerName] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -25,11 +23,7 @@ export default function LoginPage() {
     setSaving(true);
 
     try {
-      if (mode === "login") {
-        await login(username, password);
-      } else {
-        await register(username, password, playerName || username);
-      }
+      await login(username, password);
       navigate(from, { replace: true });
     } catch (err) {
       setError(err?.message ?? String(err));
@@ -46,7 +40,7 @@ export default function LoginPage() {
           <span>街灯</span>
         </div>
 
-        <div className="badge authModeBadge">{mode === "login" ? "账号登录" : "新用户注册"}</div>
+        <div className="badge authModeBadge">账号登录</div>
         <h1 className="h1 authTitle">欢迎回来</h1>
         <p className="authSubtitle">登录后查看比赛、球员和街灯榜。</p>
 
@@ -63,30 +57,16 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              autoComplete={mode === "login" ? "current-password" : "new-password"}
+              autoComplete="current-password"
             />
           </div>
-
-          {mode === "register" && (
-            <div>
-              <div className="smallMuted authLabel">球员名称</div>
-              <input className="input authInput" value={playerName} onChange={(event) => setPlayerName(event.target.value)} placeholder="默认使用用户名" />
-            </div>
-          )}
 
           {error && <div className="errorBox">{error}</div>}
 
           <button className="btn btnBrand authSubmitButton" type="submit" disabled={saving || !username.trim() || !password}>
-            {saving ? "处理中..." : mode === "login" ? "登录" : "注册并登录"}
+            {saving ? "处理中..." : "登录"}
           </button>
         </form>
-
-        <div className="authSwitchRow">
-          <span className="smallMuted">{mode === "login" ? "没有账号？" : "已有账号？"}</span>
-          <button className="btn authSwitchButton" type="button" onClick={() => setMode(mode === "login" ? "register" : "login")}>
-            {mode === "login" ? "注册球员账号" : "返回登录"}
-          </button>
-        </div>
       </div>
     </div>
   );
