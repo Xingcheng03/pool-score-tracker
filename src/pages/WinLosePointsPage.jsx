@@ -81,7 +81,7 @@ export default function WinLosePointsPage() {
       ) : (
         <>
           <div className="card" style={{ marginTop: 12, padding: 0, overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table className="winLosePointsTable" style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead style={{ background: "var(--soft)" }}>
                 <tr>
                   <th>#</th>
@@ -118,7 +118,7 @@ export default function WinLosePointsPage() {
 
           <div className="card" style={{ marginTop: 12, padding: 0, overflow: "hidden" }}>
             <div style={{ padding: 14, borderBottom: "1px solid var(--line)", fontWeight: 900 }}>最近 40 场积分变动</div>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table className="pointsLogTable" style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead style={{ background: "var(--soft)" }}>
                 <tr>
                   <th>时间</th>

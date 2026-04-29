@@ -394,20 +394,20 @@ export default function PlayerDetailPage() {
   return (
     <div>
       <div className="playerDetailHero">
-        <div>
+        <div className="playerDetailTitleBlock">
           <h1 className="h1">{data.player.name}</h1>
           <p className="sub">分标签战绩：练习赛 + 直播。数据来自后端正式比赛记录。</p>
         </div>
 
         {isOwnPlayerPage && <AccountSettingsForm compact />}
 
-        <div className="row">
+        <div className="row playerDetailControls">
           <select className="input playerDetailSeasonSelect" value={selectedSeasonId} onChange={(event) => handleSeasonChange(event.target.value)}>
             <option value="all">全部赛季</option>
             {seasons.map((season) => <option key={season.id} value={season.id}>{season.label}</option>)}
           </select>
-          <button className="btn" onClick={load} type="button">刷新</button>
-          <Link className="btn" to="/players">返回</Link>
+          <button className="btn playerDetailRefreshButton" onClick={load} type="button">刷新</button>
+          <Link className="btn playerDetailBackButton" to="/players">返回</Link>
         </div>
       </div>
 

@@ -49,12 +49,12 @@ export default function PlayersPage() {
       </p>
 
       {isAdmin && (
-        <div className="card" style={{ marginBottom: 14 }}>
-          <div className="row">
-            <div style={{ flex: 1, minWidth: 240 }}>
+        <div className="card playerAddCard" style={{ marginBottom: 14 }}>
+          <div className="row playerAddRow">
+            <div className="playerAddInputWrap" style={{ flex: 1, minWidth: 240 }}>
               <input className="input" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="输入新球员名称" />
             </div>
-            <button className="btn btnBrand" type="button" onClick={addPlayer}>
+            <button className="btn btnBrand playerAddButton" type="button" onClick={addPlayer}>
               添加球员
             </button>
           </div>
@@ -73,7 +73,7 @@ export default function PlayersPage() {
           <div className="sub">加载中...</div>
         ) : (
           <div className="tableWrap">
-            <table>
+            <table className="playersTable">
               <thead>
                 <tr>
                   <th>名称</th>
@@ -136,14 +136,14 @@ function PlayerRow({ player, isAdmin, onReload, onDelete }) {
 
   return (
     <tr>
-      <td style={{ fontWeight: 900 }}>
+      <td className="playerNameCell" style={{ fontWeight: 900 }}>
         <Link to={`/players/${player.id}`}>{player.name}</Link>
       </td>
-      <td>
+      <td className="playerViewCell">
         <Link className="btn" to={`/players/${player.id}`}>进入详情</Link>
       </td>
       {isAdmin && (
-        <td>
+        <td className="playerAccountCell">
           {!accountOpen ? (
             <div className="row">
               <span className="badge">{player.account ? player.account.username : "未绑定账号"}</span>
@@ -165,7 +165,7 @@ function PlayerRow({ player, isAdmin, onReload, onDelete }) {
         </td>
       )}
       {isAdmin && (
-        <td>
+        <td className="playerRenameCell">
           {!editing ? (
             <button className="btn" type="button" onClick={() => setEditing(true)}>改名</button>
           ) : (
@@ -178,7 +178,7 @@ function PlayerRow({ player, isAdmin, onReload, onDelete }) {
         </td>
       )}
       {isAdmin && (
-        <td>
+        <td className="playerDeleteCell">
           <ConfirmButton confirmText={`确定删除球员 ${player.name} 吗？`} onConfirm={() => onDelete(player.id)}>
             删除
           </ConfirmButton>

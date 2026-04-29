@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/useAuth.js";
 import { apiRequest, jsonBody } from "../lib/api.js";
 
 function pad2(n) {
@@ -19,6 +20,7 @@ function defaultMatchName(tag, leftName, rightName) {
 
 export default function NewMatchPage() {
   const nav = useNavigate();
+  const { user, isAdmin } = useAuth();
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -52,6 +54,23 @@ export default function NewMatchPage() {
 
   const leftPlayer = players.find((p) => p.id === leftPlayerId);
   const rightPlayer = players.find((p) => p.id === rightPlayerId);
+  const ownPlayerId = !isAdmin ? user?.player?.id : "";
+  const ownPlayerName = !isAdmin ? user?.player?.name : "";
+  const isPlayerLockedToLeft = Boolean(ownPlayerId);
+
+  useEffect(() => {
+    if (!ownPlayerId || leftPlayerId) return;
+
+    const ownPlayer = players.find((p) => p.id === ownPlayerId);
+    const leftName = ownPlayer?.name ?? ownPlayerName;
+    if (!leftName) return;
+
+    setLeftPlayerId(ownPlayerId);
+    if (isMatchNameAuto) {
+      setMatchName(defaultMatchName(tag, leftName, rightPlayer?.name));
+    }
+  }, [isMatchNameAuto, leftPlayerId, ownPlayerId, ownPlayerName, players, rightPlayer?.name, tag]);
+
   const hasTwoPlayers = players.length >= 2;
   const bothSelected = Boolean(leftPlayerId && rightPlayerId);
   const samePlayer = leftPlayerId && rightPlayerId && leftPlayerId === rightPlayerId;
@@ -177,20 +196,20 @@ export default function NewMatchPage() {
         )}
 
         <div className="row" style={{ alignItems: "flex-end" }}>
-          <div style={{ flex: 1, minWidth: 220 }}>
+          <div className="matchField matchLeftField" style={{ flex: 1, minWidth: 220 }}>
             <div className="smallMuted">左侧球员</div>
-            <select className="input" value={leftPlayerId} onChange={(e) => onChangeLeftPlayer(e.target.value)}>
+            <select className="input" value={leftPlayerId} onChange={(e) => onChangeLeftPlayer(e.target.value)} disabled={isPlayerLockedToLeft}>
               <option value="">请选择</option>
               {players.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
 
-          <div style={{ width: 140, minWidth: 140 }}>
+          <div className="matchField matchRaceField" style={{ width: 140, minWidth: 140 }}>
             <div className="smallMuted">抢几</div>
             <input className="input" type="number" min="1" value={raceTo} onChange={(e) => setRaceTo(Number(e.target.value))} />
           </div>
 
-          <div style={{ width: 200, minWidth: 200 }}>
+          <div className="matchField matchTagField" style={{ width: 200, minWidth: 200 }}>
             <div className="smallMuted">标签</div>
             <select className="input" value={tag} onChange={(e) => onChangeTag(e.target.value)}>
               <option value="practice">练习赛</option>
@@ -198,12 +217,12 @@ export default function NewMatchPage() {
             </select>
           </div>
 
-          <div style={{ width: 240, minWidth: 240 }}>
+          <div className="matchField matchTimeField" style={{ width: 240, minWidth: 240 }}>
             <div className="smallMuted">比赛时间</div>
             <input className="input" type="datetime-local" value={matchDateTimeLocal} onChange={(e) => setMatchDateTimeLocal(e.target.value)} />
           </div>
 
-          <div style={{ flex: 1, minWidth: 220 }}>
+          <div className="matchField matchRightField" style={{ flex: 1, minWidth: 220 }}>
             <div className="smallMuted">右侧球员</div>
             <select className="input" value={rightPlayerId} onChange={(e) => onChangeRightPlayer(e.target.value)}>
               <option value="">请选择</option>

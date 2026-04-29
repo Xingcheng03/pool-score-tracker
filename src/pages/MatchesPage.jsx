@@ -104,8 +104,8 @@ export default function MatchesPage() {
       <h1 className="h1">比赛数据</h1>
 
       <div className="card">
-        <div className="rowBetween" style={{ marginBottom: 12 }}>
-          <div className="row" style={{ gap: 10, alignItems: "center" }}>
+        <div className="rowBetween matchesToolbar" style={{ marginBottom: 12 }}>
+          <div className="row matchesFilterRow" style={{ gap: 10, alignItems: "center" }}>
             <div className="badge">正式比赛数：{matches.length}</div>
             <button className={tagFilter === "all" ? "btn btnBrand" : "btn"} type="button" onClick={() => setTagFilter("all")}>
               全部
@@ -118,13 +118,13 @@ export default function MatchesPage() {
             </button>
           </div>
 
-          <div className="row">
+          <div className="row matchesActionsRow">
             {isAdmin && (
               <>
-                <button className="btn" type="button" onClick={exportJson} disabled={dataBusy}>
+                <button className="btn matchesDataButton" type="button" onClick={exportJson} disabled={dataBusy}>
                   导出 JSON
                 </button>
-                <button className="btn" type="button" disabled={dataBusy} onClick={() => importInputRef.current?.click()}>
+                <button className="btn matchesDataButton" type="button" disabled={dataBusy} onClick={() => importInputRef.current?.click()}>
                   导入 JSON
                 </button>
                 <input
@@ -136,8 +136,8 @@ export default function MatchesPage() {
                 />
               </>
             )}
-            <Link className="btn btnBrand" to="/new">上报比赛</Link>
-            <button className="btn" onClick={load} type="button">刷新</button>
+            <Link className="btn btnBrand matchesSubmitButton" to="/new">上报比赛</Link>
+            <button className="btn matchesRefreshButton" onClick={load} type="button">刷新</button>
           </div>
         </div>
 
@@ -148,7 +148,7 @@ export default function MatchesPage() {
           <div className="sub">加载中...</div>
         ) : (
           <div className="tableWrap">
-            <table>
+            <table className="matchesTable">
               <thead>
                 <tr>
                   <th>标签</th>

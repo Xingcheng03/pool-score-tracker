@@ -58,15 +58,15 @@ export default function AdminReportsPage() {
       <p className="sub">只有管理员批准后的上报比赛才会进入正式比赛记录，并计算进排行榜。</p>
 
       <div className="card">
-        <div className="rowBetween" style={{ marginBottom: 12 }}>
-          <div className="row">
+        <div className="rowBetween adminReportsToolbar" style={{ marginBottom: 12 }}>
+          <div className="row adminReportsStatusTabs">
             {["PENDING", "APPROVED", "REJECTED"].map((item) => (
               <button key={item} className={status === item ? "btn btnBrand" : "btn"} type="button" onClick={() => setStatus(item)}>
                 {item === "PENDING" ? "待审核" : item === "APPROVED" ? "已通过" : "已驳回"}
               </button>
             ))}
           </div>
-          <button className="btn" type="button" onClick={load}>刷新</button>
+          <button className="btn adminReportsRefreshButton" type="button" onClick={load}>刷新</button>
         </div>
 
         {error && <div className="errorBox" style={{ marginBottom: 12 }}>{error}</div>}
@@ -74,7 +74,7 @@ export default function AdminReportsPage() {
           <div className="sub">加载中...</div>
         ) : (
           <div className="tableWrap">
-            <table>
+            <table className="adminReportsTable">
               <thead>
                 <tr>
                   <th>比赛</th>
