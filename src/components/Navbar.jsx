@@ -14,36 +14,36 @@ export default function Navbar() {
       <div className="navInner">
         <div className="brand">
           <span className="brandDot" />
-          <span>PoolLeague</span>
+          <span>街灯</span>
         </div>
 
         <div className="navLinks">
           {isAuthenticated ? (
             <>
               <NavLink to="/matches" className={linkClass}>
-                Matches
+                比赛数据
               </NavLink>
               <NavLink to="/players" className={linkClass}>
-                Players
+                球员
               </NavLink>
               <NavLink to="/new" className={linkClass}>
-                Submit Match
+                上报比赛
               </NavLink>
               <NavLink to="/leaderboard" className={linkClass}>
                 {INTERNAL_POINTS_NAME}
               </NavLink>
               <NavLink to="/win-lose-points" className={linkClass}>
-                Win/Loss Points
+                胜负积分
               </NavLink>
               {isAdmin && (
                 <NavLink to="/admin/reports" className={linkClass}>
-                  Review Scores
+                  审核比分
                 </NavLink>
               )}
             </>
           ) : (
             <NavLink to="/login" className={linkClass}>
-              Login
+              登录
             </NavLink>
           )}
         </div>
@@ -51,7 +51,7 @@ export default function Navbar() {
         {isAuthenticated && (
           <div className="navAccountLinks">
             <NavLink to={accountLink} className={linkClass}>
-              {user?.username ?? "Account"}
+              {user?.username ?? "账号"}
             </NavLink>
             <button
               className="pill navButton"
@@ -61,7 +61,7 @@ export default function Navbar() {
                 navigate("/login", { replace: true });
               }}
             >
-              Logout
+              退出登录
             </button>
           </div>
         )}

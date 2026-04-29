@@ -1,1 +1,1 @@
-﻿export const INTERNAL_POINTS_NAME = "Internal Rating";
+export const INTERNAL_POINTS_NAME = "街灯榜";
