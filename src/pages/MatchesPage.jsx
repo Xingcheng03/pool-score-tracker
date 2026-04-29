@@ -1,16 +1,19 @@
-﻿import React, { useCallback, useEffect, useRef, useState } from "react";
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/useAuth.js";
 import ConfirmButton from "../components/ConfirmButton.jsx";
 import { apiRequest, downloadJson, jsonBody } from "../lib/api.js";
+import { cachedApiRequest, invalidatePoolDataCache } from "../lib/apiCache.js";
+
+const MATCH_PAGE_SIZE = 50;
 
 function fmtDate(iso) {
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? "-" : d.toLocaleString();
 }
 
-function playerName(players, id) {
-  return players.find((player) => player.id === id)?.name ?? "Unknown";
+function playerName(playerMap, id) {
+  return playerMap.get(id) ?? "Unknown";
 }
 
 function tagLabel(tag) {
@@ -33,15 +36,16 @@ export default function MatchesPage() {
   const [error, setError] = useState("");
   const [dataMessage, setDataMessage] = useState("");
   const [dataBusy, setDataBusy] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(MATCH_PAGE_SIZE);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (force = false) => {
     setLoading(true);
     setError("");
     try {
       const tagQuery = tagFilter === "all" ? "" : `?tag=${tagFilter}`;
       const [matchResult, playerResult] = await Promise.all([
-        apiRequest(`/matches${tagQuery}`),
-        apiRequest("/players"),
+        cachedApiRequest(`/matches${tagQuery}`, { force }),
+        cachedApiRequest("/players", { force }),
       ]);
       setMatches(matchResult.matches);
       setPlayers(playerResult.players);
@@ -56,9 +60,23 @@ export default function MatchesPage() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    setVisibleCount(MATCH_PAGE_SIZE);
+  }, [tagFilter]);
+
+  const playerMap = useMemo(
+    () => new Map(players.map((player) => [player.id, player.name])),
+    [players],
+  );
+  const visibleMatches = useMemo(
+    () => matches.slice(0, visibleCount),
+    [matches, visibleCount],
+  );
+
   async function onDelete(matchId) {
     await apiRequest(`/matches/${matchId}`, { method: "DELETE" });
-    await load();
+    invalidatePoolDataCache();
+    await load(true);
   }
 
   async function exportJson() {
@@ -90,7 +108,8 @@ export default function MatchesPage() {
         body: jsonBody(parsed),
       });
       setDataMessage(`导入完成：球员 ${result.importedPlayers}，比赛 ${result.importedMatches}，跳过 ${result.skippedMatches.length}。`);
-      await load();
+      invalidatePoolDataCache();
+      await load(true);
     } catch (err) {
       setError(err?.message ?? String(err));
     } finally {
@@ -137,7 +156,7 @@ export default function MatchesPage() {
               </>
             )}
             <Link className="btn btnBrand matchesSubmitButton" to="/new">上报比赛</Link>
-            <button className="btn matchesRefreshButton" onClick={load} type="button">刷新</button>
+            <button className="btn matchesRefreshButton" onClick={() => load(true)} type="button">刷新</button>
           </div>
         </div>
 
@@ -171,16 +190,16 @@ export default function MatchesPage() {
                     </td>
                   </tr>
                 ) : (
-                  matches.map((match) => (
+                  visibleMatches.map((match) => (
                     <tr key={match.id}>
                       <td style={{ fontWeight: 900 }}>{tagLabel(match.tag)}</td>
                       <td style={{ fontWeight: 900 }}>{match.matchName}</td>
                       <td>{fmtDate(match.dateISO)}</td>
                       <td>抢 {match.raceTo}</td>
-                      <td>{playerName(players, match.leftPlayerId)}</td>
+                      <td>{playerName(playerMap, match.leftPlayerId)}</td>
                       <td>{match.leftScore} : {match.rightScore}</td>
-                      <td>{playerName(players, match.rightPlayerId)}</td>
-                      <td>{playerName(players, match.winnerId)}</td>
+                      <td>{playerName(playerMap, match.rightPlayerId)}</td>
+                      <td>{playerName(playerMap, match.winnerId)}</td>
                       <td style={{ fontWeight: 900 }}>{match.isHandicap ? "是" : "否"}</td>
                       {isAdmin && (
                         <td>
@@ -194,6 +213,13 @@ export default function MatchesPage() {
                 )}
               </tbody>
             </table>
+          </div>
+        )}
+        {!loading && matches.length > visibleMatches.length && (
+          <div className="row" style={{ justifyContent: "center", marginTop: 12 }}>
+            <button className="btn" type="button" onClick={() => setVisibleCount((count) => count + MATCH_PAGE_SIZE)}>
+              Load more ({visibleMatches.length} / {matches.length})
+            </button>
           </div>
         )}
       </div>

@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { INTERNAL_POINTS_NAME } from "../constants/labels.js";
-import { apiRequest, buildQuery } from "../lib/api.js";
+import { buildQuery } from "../lib/api.js";
+import { cachedApiRequest } from "../lib/apiCache.js";
+import { useDebouncedValue } from "../lib/useDebouncedValue.js";
 
 const WIN_POINTS = 20;
 const LOSE_POINTS = 15;
@@ -22,16 +24,17 @@ export default function WinLosePointsPage() {
   const [computed, setComputed] = useState({ rows: [], logs: [], totalMatchesInRange: 0, countedMatches: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const debouncedQ = useDebouncedValue(q, 300);
 
   const cutoffISO = cutoffLocal ? new Date(cutoffLocal).toISOString() : "";
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (force = false) => {
     setLoading(true);
     setError("");
     try {
       const [pointsResult, playerResult] = await Promise.all([
-        apiRequest(`/leaderboard/win-lose${buildQuery({ q, cutoffISO })}`),
-        apiRequest("/players"),
+        cachedApiRequest(`/leaderboard/win-lose${buildQuery({ q: debouncedQ, cutoffISO })}`, { force }),
+        cachedApiRequest("/players", { force }),
       ]);
       setComputed(pointsResult);
       setPlayers(playerResult.players);
@@ -40,7 +43,7 @@ export default function WinLosePointsPage() {
     } finally {
       setLoading(false);
     }
-  }, [q, cutoffISO]);
+  }, [debouncedQ, cutoffISO]);
 
   useEffect(() => {
     load();
@@ -65,7 +68,7 @@ export default function WinLosePointsPage() {
           <input className="input" type="datetime-local" value={cutoffLocal} onChange={(e) => setCutoffLocal(e.target.value)} title="截止日期（为空=统计全部）" />
           <div className="row" style={{ gap: 8 }}>
             <button className="btn" type="button" onClick={() => setCutoffLocal("")}>清空截止日期</button>
-            <button className="btn" type="button" onClick={load}>刷新</button>
+            <button className="btn" type="button" onClick={() => load(true)}>刷新</button>
           </div>
         </div>
 

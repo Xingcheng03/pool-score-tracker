@@ -1,6 +1,7 @@
 import { prisma } from "../lib/prisma.js";
 import { normalizeImportPayload, normalizeMatchInput } from "./matchInput.service.js";
 import { serializeMatch } from "./shape.service.js";
+import { invalidateStatsCache } from "./stats.service.js";
 import {
   calcPlayerStats,
   filterMatchesBySeason,
@@ -212,6 +213,8 @@ export async function importStoreJson(payload, actorId) {
 
     return { importedPlayers, importedMatches };
   });
+
+  invalidateStatsCache();
 
   return {
     ...result,

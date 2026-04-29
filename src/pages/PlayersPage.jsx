@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../auth/useAuth.js";
 import ConfirmButton from "../components/ConfirmButton.jsx";
 import { apiRequest, jsonBody } from "../lib/api.js";
+import { cachedApiRequest, invalidateApiCache, invalidatePoolDataCache } from "../lib/apiCache.js";
 
 export default function PlayersPage() {
   const { isAdmin } = useAuth();
@@ -11,11 +12,11 @@ export default function PlayersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  async function load() {
+  async function load(force = false) {
     setLoading(true);
     setError("");
     try {
-      const result = await apiRequest("/players");
+      const result = await cachedApiRequest("/players", { force });
       setPlayers(result.players);
     } catch (err) {
       setError(err?.message ?? String(err));
@@ -32,13 +33,15 @@ export default function PlayersPage() {
     const name = newName.trim();
     if (!name) return;
     await apiRequest("/players", { method: "POST", body: jsonBody({ name }) });
+    invalidatePoolDataCache();
     setNewName("");
-    await load();
+    await load(true);
   }
 
   async function deletePlayer(id) {
     await apiRequest(`/players/${id}`, { method: "DELETE" });
-    await load();
+    invalidatePoolDataCache();
+    await load(true);
   }
 
   return (
@@ -61,7 +64,7 @@ export default function PlayersPage() {
       <div className="card">
         <div className="rowBetween" style={{ marginBottom: 12 }}>
           <div className="badge">球员数：{players.length}</div>
-          <button className="btn" onClick={load} type="button">刷新</button>
+          <button className="btn" onClick={() => load(true)} type="button">刷新</button>
         </div>
 
         {error && <div className="errorBox" style={{ marginBottom: 12 }}>{error}</div>}
@@ -112,8 +115,9 @@ function PlayerRow({ player, isAdmin, onReload, onDelete }) {
       method: "PATCH",
       body: jsonBody({ name: name.trim() }),
     });
+    invalidatePoolDataCache();
     setEditing(false);
-    await onReload();
+    await onReload(true);
   }
 
   async function saveAccount() {
@@ -123,9 +127,10 @@ function PlayerRow({ player, isAdmin, onReload, onDelete }) {
         method: "PUT",
         body: jsonBody({ username: username.trim(), password }),
       });
+      invalidateApiCache(["/players"]);
       setPassword("");
       setAccountOpen(false);
-      await onReload();
+      await onReload(true);
     } catch (err) {
       setError(err?.message ?? String(err));
     }

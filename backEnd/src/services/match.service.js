@@ -1,6 +1,7 @@
 import { prisma } from "../lib/prisma.js";
 import { httpError } from "../utils/httpError.js";
 import { serializeMatch } from "./shape.service.js";
+import { invalidateStatsCache } from "./stats.service.js";
 
 function buildMatchWhere(query) {
   const where = {};
@@ -28,5 +29,6 @@ export async function getMatch(id) {
 
 export async function deleteMatch(id) {
   await prisma.match.delete({ where: { id } });
+  invalidateStatsCache();
   return { ok: true };
 }

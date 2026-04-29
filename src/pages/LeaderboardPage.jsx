@@ -1,7 +1,9 @@
 ﻿import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { INTERNAL_POINTS_NAME } from "../constants/labels.js";
-import { apiRequest, buildQuery } from "../lib/api.js";
+import { buildQuery } from "../lib/api.js";
+import { cachedApiRequest } from "../lib/apiCache.js";
+import { useDebouncedValue } from "../lib/useDebouncedValue.js";
 
 function pct(value) {
   return `${(Number(value ?? 0) * 100).toFixed(1)}%`;
@@ -31,26 +33,23 @@ export default function LeaderboardPage() {
   const [seasons, setSeasons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const debouncedQ = useDebouncedValue(q, 300);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (force = false) => {
     setLoading(true);
     setError("");
     try {
-      const query = buildQuery({ mode, seasonId, q, minMatches, sortKey, sortDir });
-      const [leaderboard, winLose, seasonResult] = await Promise.all([
-        apiRequest(`/leaderboard${query}`),
-        apiRequest(`/leaderboard/win-lose${buildQuery({ q })}`),
-        apiRequest("/leaderboard/seasons"),
-      ]);
-      setRows(leaderboard.rows);
-      setWinLoseRows(winLose.rows);
-      setSeasons(seasonResult.seasons);
+      const query = buildQuery({ mode, seasonId, q: debouncedQ, minMatches, sortKey, sortDir });
+      const summary = await cachedApiRequest(`/leaderboard/summary${query}`, { force });
+      setRows(summary.leaderboard.rows);
+      setWinLoseRows(summary.winLose.rows);
+      setSeasons(summary.seasons);
     } catch (err) {
       setError(err?.message ?? String(err));
     } finally {
       setLoading(false);
     }
-  }, [mode, seasonId, q, minMatches, sortKey, sortDir]);
+  }, [mode, seasonId, debouncedQ, minMatches, sortKey, sortDir]);
 
   useEffect(() => {
     load();
@@ -103,7 +102,7 @@ export default function LeaderboardPage() {
             <option value={30}>至少 30 场</option>
           </select>
 
-          <button className="btn" type="button" onClick={load}>刷新</button>
+          <button className="btn" type="button" onClick={() => load(true)}>刷新</button>
         </div>
       </div>
 

@@ -1714,6 +1714,42 @@ tbody tr:hover td {
 }
 
 @media (max-width: 640px) {
+  .nav,
+  .card {
+    backdrop-filter: none;
+  }
+
+  .nav {
+    background: rgba(251, 252, 255, 0.96);
+  }
+
+  .card,
+  .leaderboardTopCard,
+  .leaderboardTableCard,
+  .leaderboardWinLoseCard,
+  .playerDetailOpponentCard,
+  .playerDetailTableCard {
+    box-shadow: 0 6px 16px rgba(22, 34, 51, 0.055);
+  }
+
+  .btn,
+  .pill {
+    transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease, opacity 0.12s ease;
+  }
+
+  .btn:hover,
+  .pill:hover {
+    transform: none;
+  }
+
+  tbody tr:hover td {
+    background: transparent;
+  }
+
+  .tableWrap {
+    -webkit-overflow-scrolling: touch;
+  }
+
   .badge {
     padding: 6px 10px;
     font-size: 11px;

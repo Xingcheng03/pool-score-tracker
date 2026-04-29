@@ -2,6 +2,7 @@ import { prisma } from "../lib/prisma.js";
 import { hashPassword } from "../utils/password.js";
 import { httpError } from "../utils/httpError.js";
 import { serializePlayer, serializeUser } from "./shape.service.js";
+import { invalidateStatsCache } from "./stats.service.js";
 
 function cleanName(name) {
   const value = String(name ?? "").trim();
@@ -53,6 +54,7 @@ export async function createPlayer(input) {
     include: { user: true },
   });
 
+  invalidateStatsCache();
   return serializePlayer(player, { includeAccount: true });
 }
 
@@ -65,6 +67,7 @@ export async function updatePlayer(id, input) {
     include: { user: true },
   });
 
+  invalidateStatsCache();
   return serializePlayer(player, { includeAccount: true });
 }
 
@@ -99,6 +102,7 @@ export async function deletePlayer(id) {
   }
 
   await prisma.player.delete({ where: { id } });
+  invalidateStatsCache();
   return { ok: true };
 }
 

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/useAuth.js";
 import { apiRequest, jsonBody } from "../lib/api.js";
+import { cachedApiRequest, invalidateApiCache } from "../lib/apiCache.js";
 
 function pad2(n) {
   return String(n).padStart(2, "0");
@@ -41,7 +42,7 @@ export default function NewMatchPage() {
   useEffect(() => {
     async function load() {
       try {
-        const result = await apiRequest("/players");
+        const result = await cachedApiRequest("/players");
         setPlayers(result.players);
       } catch (err) {
         setError(err?.message ?? String(err));
@@ -140,6 +141,7 @@ export default function NewMatchPage() {
         }),
       });
 
+      invalidateApiCache(["/match-reports"]);
       alert("比赛分数已上报，等待管理员审核。");
       nav("/matches");
     } catch (err) {

@@ -2,6 +2,7 @@ import { prisma } from "../lib/prisma.js";
 import { httpError } from "../utils/httpError.js";
 import { normalizeMatchInput } from "./matchInput.service.js";
 import { serializeReport } from "./shape.service.js";
+import { invalidateStatsCache } from "./stats.service.js";
 
 function assertPlayerCanSubmit(user, match) {
   if (user.role === "ADMIN") return;
@@ -111,6 +112,7 @@ export async function approveMatchReport(reportId, reviewerId) {
     return updatedReport;
   });
 
+  invalidateStatsCache();
   return serializeReport(result);
 }
 

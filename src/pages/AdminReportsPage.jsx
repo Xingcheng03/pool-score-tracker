@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { apiRequest, jsonBody } from "../lib/api.js";
+import { cachedApiRequest, invalidateApiCache, invalidatePoolDataCache } from "../lib/apiCache.js";
 
 function fmtDate(iso) {
   const date = new Date(iso);
@@ -17,13 +18,13 @@ export default function AdminReportsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (force = false) => {
     setLoading(true);
     setError("");
     try {
       const [reportResult, playerResult] = await Promise.all([
         apiRequest(`/match-reports?status=${status}`),
-        apiRequest("/players"),
+        cachedApiRequest("/players", { force }),
       ]);
       setReports(reportResult.reports);
       setPlayers(playerResult.players);
@@ -40,7 +41,9 @@ export default function AdminReportsPage() {
 
   async function approve(id) {
     await apiRequest(`/match-reports/${id}/approve`, { method: "POST" });
-    await load();
+    invalidateApiCache(["/match-reports"]);
+    invalidatePoolDataCache();
+    await load(true);
   }
 
   async function reject(id) {
@@ -49,7 +52,8 @@ export default function AdminReportsPage() {
       method: "POST",
       body: jsonBody({ reason }),
     });
-    await load();
+    invalidateApiCache(["/match-reports"]);
+    await load(true);
   }
 
   return (
@@ -66,7 +70,7 @@ export default function AdminReportsPage() {
               </button>
             ))}
           </div>
-          <button className="btn adminReportsRefreshButton" type="button" onClick={load}>刷新</button>
+          <button className="btn adminReportsRefreshButton" type="button" onClick={() => load(true)}>刷新</button>
         </div>
 
         {error && <div className="errorBox" style={{ marginBottom: 12 }}>{error}</div>}

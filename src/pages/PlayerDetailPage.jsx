@@ -3,7 +3,8 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/useAuth.js";
 import AccountSettingsForm from "../components/AccountSettingsForm.jsx";
 import { INTERNAL_POINTS_NAME } from "../constants/labels.js";
-import { apiRequest, buildQuery } from "../lib/api.js";
+import { buildQuery } from "../lib/api.js";
+import { cachedApiRequest } from "../lib/apiCache.js";
 
 function formatCount(value) {
   if (!Number.isFinite(value)) return "0";
@@ -356,14 +357,14 @@ export default function PlayerDetailPage() {
   const seasonQuery = selectedSeasonId === "all" ? "" : `?season=${selectedSeasonId}`;
   const isOwnPlayerPage = user?.player?.id === playerId;
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (force = false) => {
     setLoading(true);
     setError("");
     try {
       const [playerResult, statsResult, seasonResult] = await Promise.all([
-        apiRequest("/players"),
-        apiRequest(`/leaderboard/players/${playerId}/stats${buildQuery({ season: selectedSeasonId })}`),
-        apiRequest("/leaderboard/seasons"),
+        cachedApiRequest("/players", { force }),
+        cachedApiRequest(`/leaderboard/players/${playerId}/stats${buildQuery({ season: selectedSeasonId })}`, { force }),
+        cachedApiRequest("/leaderboard/seasons", { force }),
       ]);
       setPlayers(playerResult.players);
       setData(statsResult);
@@ -405,7 +406,7 @@ export default function PlayerDetailPage() {
             <option value="all">全部赛季</option>
             {seasons.map((season) => <option key={season.id} value={season.id}>{season.label}</option>)}
           </select>
-          <button className="btn playerDetailRefreshButton" onClick={load} type="button">刷新</button>
+          <button className="btn playerDetailRefreshButton" onClick={() => load(true)} type="button">刷新</button>
           <Link className="btn playerDetailBackButton" to="/players">返回</Link>
         </div>
       </div>

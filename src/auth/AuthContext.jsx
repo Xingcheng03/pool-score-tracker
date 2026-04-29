@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { apiRequest, clearToken, getToken, jsonBody, setToken } from "../lib/api.js";
+import { invalidateApiCache } from "../lib/apiCache.js";
 import { AuthContext } from "./useAuth.js";
 
 export function AuthProvider({ children }) {
@@ -38,6 +39,7 @@ export function AuthProvider({ children }) {
       body: jsonBody({ username, password }),
     });
     setToken(result.token);
+    invalidateApiCache();
     setUser(result.user);
     return result.user;
   }
@@ -47,12 +49,14 @@ export function AuthProvider({ children }) {
       method: "PATCH",
       body: jsonBody(payload),
     });
+    invalidateApiCache(["/players"]);
     setUser(result.user);
     return result.user;
   }
 
   function logout() {
     clearToken();
+    invalidateApiCache();
     setUser(null);
   }
 

@@ -1,7 +1,13 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { getLeaderboard, getPlayerStats, getSeasons, getWinLosePoints } from "../services/stats.service.js";
+import {
+  getLeaderboard,
+  getLeaderboardSummary,
+  getPlayerStats,
+  getSeasons,
+  getWinLosePoints,
+} from "../services/stats.service.js";
 
 export const leaderboardRouter = Router();
 
@@ -17,6 +23,10 @@ leaderboardRouter.get("/win-lose", asyncHandler(async (req, res) => {
 
 leaderboardRouter.get("/seasons", asyncHandler(async (_req, res) => {
   res.json({ seasons: await getSeasons() });
+}));
+
+leaderboardRouter.get("/summary", asyncHandler(async (req, res) => {
+  res.json(await getLeaderboardSummary(req.query));
 }));
 
 leaderboardRouter.get("/players/:playerId/stats", asyncHandler(async (req, res) => {
