@@ -11,6 +11,7 @@ import { playersRouter } from "./routes/players.routes.js";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
 
 export const app = express();
+export default app;
 
 app.use(cors({ origin: env.corsOrigin }));
 app.use(express.json({ limit: "25mb" }));
