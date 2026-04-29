@@ -44,9 +44,6 @@ export default function PlayersPage() {
   return (
     <div>
       <h1 className="h1">球员</h1>
-      <p className="sub">
-        所有登录用户都可以查看球员和详情。管理员可以新增、改名、删除无比赛记录的球员，并给历史导入球员绑定登录账号。
-      </p>
 
       {isAdmin && (
         <div className="card playerAddCard" style={{ marginBottom: 14 }}>

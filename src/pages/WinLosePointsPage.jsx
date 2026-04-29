@@ -54,7 +54,7 @@ export default function WinLosePointsPage() {
         <div>
           <h2 style={{ margin: 0 }}>胜负积分榜（非{INTERNAL_POINTS_NAME}）</h2>
           <div style={{ color: "var(--muted)", fontSize: 13, marginTop: 6 }}>
-            后端按原页面逻辑计算：胜 +{WIN_POINTS}，负 -{LOSE_POINTS}，连胜/连败每满 3 场额外 ±{STREAK_BONUS}
+            胜 +{WIN_POINTS}，负 -{LOSE_POINTS}，连胜/连败每满 3 场额外 ±{STREAK_BONUS}
           </div>
         </div>
       </div>

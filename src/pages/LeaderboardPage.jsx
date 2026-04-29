@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+﻿import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { INTERNAL_POINTS_NAME } from "../constants/labels.js";
 import { apiRequest, buildQuery } from "../lib/api.js";
@@ -72,9 +72,9 @@ export default function LeaderboardPage() {
     <div>
       <div className="pageTitle">
         <div>
-          <h2 style={{ margin: 0 }}>球员积分榜</h2>
+          <h2 style={{ margin: 0 }}>街灯榜</h2>
           <div style={{ color: "var(--muted)", fontSize: 13, marginTop: 6 }}>
-            {INTERNAL_POINTS_NAME}：后端读取正式比赛记录，并按原 `store.js` 的 Rating 逻辑计算。
+            {INTERNAL_POINTS_NAME}：读取正式比赛记录，并按页面底部的逻辑计算。
           </div>
         </div>
       </div>

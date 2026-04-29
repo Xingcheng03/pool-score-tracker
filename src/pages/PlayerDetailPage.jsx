@@ -227,7 +227,6 @@ function RatingHistory({ history, players }) {
       <div className="playerFargoHead">
         <div>
           <div className="badge">全部比赛{INTERNAL_POINTS_NAME}历史走势</div>
-          <p className="playerFargoSub">后端按正式比赛时间顺序回放原 Rating 逻辑。</p>
         </div>
         <div className="playerFargoMeta">
           <div className="playerFargoStat"><span className="playerFargoStatLabel">起始</span><span className="playerFargoStatValue">{formatRating(history.startRating)}</span></div>
@@ -396,7 +395,7 @@ export default function PlayerDetailPage() {
       <div className="playerDetailHero">
         <div className="playerDetailTitleBlock">
           <h1 className="h1">{data.player.name}</h1>
-          <p className="sub">分标签战绩：练习赛 + 直播。数据来自后端正式比赛记录。</p>
+          <p className="sub">分标签战绩：练习赛 + 直播。数据来自正式比赛记录。</p>
         </div>
 
         {isOwnPlayerPage && <AccountSettingsForm compact />}

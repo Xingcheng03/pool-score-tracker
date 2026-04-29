@@ -45,9 +45,6 @@ export default function LoginPage() {
         <h1 className="h1" style={{ marginTop: 12 }}>
           街灯
         </h1>
-        <p className="sub">
-          管理员可以审核比分、导入导出历史 JSON、给已有球员绑定账号。球员登录后可以查看数据并上报比赛分数。
-        </p>
 
         <form onSubmit={onSubmit} className="formStack">
           <div>
