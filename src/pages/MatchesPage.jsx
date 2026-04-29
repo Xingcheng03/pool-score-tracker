@@ -20,6 +20,11 @@ function tagLabel(tag) {
   return tag === "live" ? "直播" : "练习赛";
 }
 
+function handicapDetail(match, playerMap) {
+  if (!match.isHandicap) return "";
+  return `${playerName(playerMap, match.handicapGiverId)} 给 ${playerName(playerMap, match.handicapReceiverId)} 放门`;
+}
+
 function todayName() {
   const date = new Date();
   const pad = (n) => String(n).padStart(2, "0");
@@ -200,7 +205,12 @@ export default function MatchesPage() {
                       <td>{match.leftScore} : {match.rightScore}</td>
                       <td>{playerName(playerMap, match.rightPlayerId)}</td>
                       <td>{playerName(playerMap, match.winnerId)}</td>
-                      <td style={{ fontWeight: 900 }}>{match.isHandicap ? "是" : "否"}</td>
+                      <td className="matchHandicapCell">
+                        <span className="matchHandicapValue">
+                          <span className="matchHandicapStatus">{match.isHandicap ? "是" : "否"}</span>
+                          {match.isHandicap && <span className="matchHandicapDetail">{handicapDetail(match, playerMap)}</span>}
+                        </span>
+                      </td>
                       {isAdmin && (
                         <td>
                           <ConfirmButton confirmText="确定删除这场正式比赛吗？" onConfirm={() => onDelete(match.id)}>
@@ -226,4 +236,3 @@ export default function MatchesPage() {
     </div>
   );
 }
-

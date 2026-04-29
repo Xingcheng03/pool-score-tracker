@@ -800,6 +800,23 @@ tbody tr:hover td {
   background: rgba(33, 88, 245, 0.035);
 }
 
+.matchHandicapCell {
+  font-weight: 900;
+}
+
+.matchHandicapValue {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 25px;
+  min-width: 0;
+}
+
+.matchHandicapDetail {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .kpiGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
