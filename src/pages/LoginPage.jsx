@@ -41,39 +41,49 @@ export default function LoginPage() {
   return (
     <div className="authLayout">
       <div className="card authCard">
-        <div className="badge">{mode === "login" ? "账号登录" : "新用户注册"}</div>
-        <h1 className="h1" style={{ marginTop: 12 }}>
-          街灯
-        </h1>
+        <div className="authBrandMark">
+          <span className="brandDot" />
+          <span>街灯</span>
+        </div>
 
-        <form onSubmit={onSubmit} className="formStack">
+        <div className="badge authModeBadge">{mode === "login" ? "账号登录" : "新用户注册"}</div>
+        <h1 className="h1 authTitle">欢迎回来</h1>
+        <p className="authSubtitle">登录后查看比赛、球员和街灯榜。</p>
+
+        <form onSubmit={onSubmit} className="formStack authForm">
           <div>
-            <div className="smallMuted">用户名</div>
-            <input className="input" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
+            <div className="smallMuted authLabel">用户名</div>
+            <input className="input authInput" value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" />
           </div>
 
           <div>
-            <div className="smallMuted">密码</div>
-            <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} />
+            <div className="smallMuted authLabel">密码</div>
+            <input
+              className="input authInput"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete={mode === "login" ? "current-password" : "new-password"}
+            />
           </div>
 
           {mode === "register" && (
             <div>
-              <div className="smallMuted">球员名称</div>
-              <input className="input" value={playerName} onChange={(e) => setPlayerName(e.target.value)} placeholder="默认使用用户名" />
+              <div className="smallMuted authLabel">球员名称</div>
+              <input className="input authInput" value={playerName} onChange={(event) => setPlayerName(event.target.value)} placeholder="默认使用用户名" />
             </div>
           )}
 
           {error && <div className="errorBox">{error}</div>}
 
-          <button className="btn btnBrand" type="submit" disabled={saving || !username.trim() || !password}>
+          <button className="btn btnBrand authSubmitButton" type="submit" disabled={saving || !username.trim() || !password}>
             {saving ? "处理中..." : mode === "login" ? "登录" : "注册并登录"}
           </button>
         </form>
 
-        <div className="rowBetween" style={{ marginTop: 14 }}>
+        <div className="authSwitchRow">
           <span className="smallMuted">{mode === "login" ? "没有账号？" : "已有账号？"}</span>
-          <button className="btn" type="button" onClick={() => setMode(mode === "login" ? "register" : "login")}>
+          <button className="btn authSwitchButton" type="button" onClick={() => setMode(mode === "login" ? "register" : "login")}>
             {mode === "login" ? "注册球员账号" : "返回登录"}
           </button>
         </div>

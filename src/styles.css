@@ -149,6 +149,45 @@ a:hover {
   width: min(520px, 100%);
 }
 
+.authBrandMark {
+  display: none;
+}
+
+.authTitle {
+  margin-top: 12px;
+}
+
+.authSubtitle {
+  margin: -2px 0 20px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.authModeBadge {
+  margin-bottom: 4px;
+}
+
+.authForm {
+  gap: 14px;
+}
+
+.authLabel {
+  margin-bottom: 6px;
+}
+
+.authSubmitButton {
+  width: 100%;
+}
+
+.authSwitchRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+
 .settingsCard {
   max-width: 680px;
 }
@@ -1176,6 +1215,10 @@ tbody tr:hover td {
     padding: 18px 12px 42px;
   }
 
+  .navLoginPage {
+    display: none;
+  }
+
   .nav {
     border-bottom-color: rgba(223, 230, 240, 0.72);
   }
@@ -1533,14 +1576,93 @@ tbody tr:hover td {
   }
 
   .authLayout {
-    min-height: calc(100vh - 128px);
-    place-items: start stretch;
+    min-height: 100svh;
+    place-items: stretch;
+    margin: -18px -12px -42px;
+    padding: 28px 16px 24px;
+    background:
+      radial-gradient(circle at 16% 4%, rgba(33, 88, 245, 0.16), transparent 26%),
+      linear-gradient(180deg, #f8fbff 0%, #eef4ff 46%, #f6f8fc 100%);
   }
 
-  .authCard,
+  .authCard {
+    width: 100%;
+    max-width: none;
+    align-self: start;
+    margin-top: 8px;
+    padding: 22px 18px 18px;
+    border-radius: 24px;
+    border-color: rgba(188, 204, 230, 0.86);
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 20px 54px rgba(28, 55, 105, 0.14);
+  }
+
   .settingsCard {
     width: 100%;
     max-width: none;
+  }
+
+  .authBrandMark {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: 950;
+    color: var(--text);
+    margin-bottom: 34px;
+  }
+
+  .authBrandMark .brandDot {
+    width: 13px;
+    height: 13px;
+  }
+
+  .authModeBadge {
+    margin-bottom: 14px;
+    background: #f8fbff;
+  }
+
+  .authTitle {
+    margin: 0;
+    font-size: 34px;
+    line-height: 1.08;
+  }
+
+  .authSubtitle {
+    margin: 10px 0 24px;
+    font-size: 13px;
+  }
+
+  .authForm {
+    gap: 16px;
+  }
+
+  .authInput {
+    min-height: 52px;
+    border-radius: 17px;
+    padding: 13px 16px;
+    font-size: 16px;
+    background: #eef4ff;
+  }
+
+  .authSubmitButton {
+    min-height: 52px;
+    border-radius: 17px;
+    margin-top: 2px;
+    font-size: 15px;
+    box-shadow: 0 14px 30px rgba(33, 88, 245, 0.22);
+  }
+
+  .authSwitchRow {
+    margin-top: 16px;
+    align-items: center;
+  }
+
+  .authSwitchButton {
+    min-height: 48px;
+    border-radius: 16px;
+    padding-inline: 16px;
+    background: #ffffff;
   }
 }
 

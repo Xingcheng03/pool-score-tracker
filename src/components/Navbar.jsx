@@ -1,16 +1,18 @@
 ﻿import React from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/useAuth.js";
 import { INTERNAL_POINTS_NAME } from "../constants/labels.js";
 
 export default function Navbar() {
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
   const linkClass = ({ isActive }) => (isActive ? "pill pillActive" : "pill");
   const accountLink = user?.player?.id ? `/players/${user.player.id}` : "/account";
+  const navClassName = location.pathname === "/login" ? "nav navLoginPage" : "nav";
 
   return (
-    <div className="nav">
+    <div className={navClassName}>
       <div className="navInner">
         <div className="brand">
           <span className="brandDot" />
