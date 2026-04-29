@@ -104,6 +104,7 @@ a:hover {
 
 .navAccountLinks {
   display: flex;
+  align-items: center;
   gap: 8px;
   flex-wrap: wrap;
   margin-left: auto;
@@ -1728,6 +1729,701 @@ tbody tr:hover td {
   font-size: 12px;
   background: linear-gradient(180deg, #ffffff, #f8fafc);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+}
+
+.aiPage {
+  display: grid;
+  gap: 18px;
+}
+
+.aiControlCard {
+  display: grid;
+  gap: 18px;
+  border-color: rgba(207, 216, 230, 0.88);
+  background:
+    radial-gradient(circle at top left, rgba(33, 88, 245, 0.08), transparent 32%),
+    linear-gradient(180deg, #ffffff, #f8fbff);
+}
+
+.aiTabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, auto));
+  justify-content: start;
+  gap: 10px;
+}
+
+.aiTabButton {
+  min-width: 124px;
+}
+
+.aiFormGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.aiField {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.aiField > span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.aiReadonlyField {
+  min-height: 46px;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid rgba(207, 216, 230, 0.92);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  box-shadow: var(--shadowSoft);
+}
+
+.aiReadonlyField strong {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 950;
+  overflow-wrap: anywhere;
+}
+
+.aiReadonlyField em {
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.aiSubmitWrap {
+  display: grid;
+}
+
+.aiSubmitButton {
+  width: 100%;
+  min-height: 46px;
+}
+
+.aiEmptyState {
+  min-height: 160px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: var(--muted);
+  font-weight: 850;
+  line-height: 1.7;
+  border-style: dashed;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.94), rgba(255, 255, 255, 0.98));
+}
+
+.aiResultCard {
+  display: grid;
+  gap: 18px;
+  border-color: rgba(207, 216, 230, 0.92);
+  background:
+    radial-gradient(circle at top right, rgba(39, 163, 106, 0.07), transparent 34%),
+    linear-gradient(180deg, #ffffff, #f8fbff);
+}
+
+.aiResultHead {
+  align-items: flex-start;
+}
+
+.aiFallbackNotice {
+  border: 1px solid rgba(214, 139, 22, 0.32);
+  color: #9a5f08;
+  background: rgba(214, 139, 22, 0.09);
+  border-radius: 14px;
+  padding: 11px 13px;
+  font-weight: 900;
+  line-height: 1.5;
+}
+
+.aiSummary {
+  border-left: 4px solid var(--primary);
+  border-radius: 16px;
+  padding: 15px 16px;
+  background: rgba(33, 88, 245, 0.055);
+  font-size: 20px;
+  line-height: 1.72;
+  font-weight: 900;
+  color: var(--text);
+}
+
+.aiTextBlock {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(223, 230, 240, 0.84);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.7);
+  color: #4b5f7a;
+  line-height: 1.75;
+  font-weight: 750;
+}
+
+.aiMetricGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.aiMetric {
+  display: grid;
+  gap: 6px;
+  min-height: 108px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(207, 216, 230, 0.9);
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  box-shadow: 0 14px 30px rgba(22, 34, 51, 0.055);
+}
+
+.aiMetric span,
+.aiMetric em {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  font-style: normal;
+}
+
+.aiMetric strong {
+  color: var(--text);
+  font-size: 27px;
+  line-height: 1.15;
+  font-weight: 950;
+  overflow-wrap: anywhere;
+}
+
+.aiSectionTitle {
+  margin: 0;
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 950;
+  letter-spacing: 0.1px;
+}
+
+.aiBaselinePanel {
+  display: grid;
+  gap: 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+}
+
+.aiDetailedPanel {
+  display: grid;
+  gap: 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+}
+
+.aiScoreGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.aiScoreBar {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.aiScoreBar strong {
+  color: var(--text);
+}
+
+.aiScoreTrack {
+  height: 9px;
+  border-radius: 999px;
+  background: var(--soft);
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.aiScoreFill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--primary), #27a36a);
+}
+
+.aiReasonList {
+  margin: 14px 0 0;
+  padding-left: 20px;
+  color: var(--muted);
+  line-height: 1.7;
+  font-weight: 750;
+}
+
+.aiCandidateList {
+  margin-top: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.aiCandidateRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(246, 248, 252, 0.72);
+  font-weight: 850;
+}
+
+.aiCandidateRow span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.aiCandidateRow strong {
+  color: var(--primary);
+}
+
+.aiCautions {
+  display: grid;
+  gap: 8px;
+}
+
+.aiCautions > div {
+  border: 1px solid rgba(214, 139, 22, 0.28);
+  color: #9a5f08;
+  background: rgba(214, 139, 22, 0.08);
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.55;
+  font-weight: 850;
+}
+
+.aiConfidence-low {
+  color: #9a5f08;
+  border-color: rgba(214, 139, 22, 0.32);
+  background: rgba(214, 139, 22, 0.08);
+}
+
+.aiConfidence-medium {
+  color: #1f5fb8;
+  border-color: rgba(33, 88, 245, 0.26);
+  background: rgba(33, 88, 245, 0.08);
+}
+
+.aiConfidence-high {
+  color: #137548;
+  border-color: rgba(19, 138, 76, 0.26);
+  background: rgba(19, 138, 76, 0.08);
+}
+
+.aiEvidenceTable {
+  min-width: 1180px;
+}
+
+.aiRecentTable,
+.aiCommonTable,
+.aiDeltaTable {
+  min-width: 820px;
+}
+
+.aiDeltaTable {
+  min-width: 680px;
+}
+
+.aiEvidenceTable th,
+.aiEvidenceTable td,
+.aiRecentTable th,
+.aiRecentTable td,
+.aiCommonTable th,
+.aiCommonTable td,
+.aiDeltaTable th,
+.aiDeltaTable td {
+  vertical-align: top;
+  line-height: 1.55;
+}
+
+.aiDetailedPanel > .tableWrap,
+.aiEvidenceCard .tableWrap {
+  border-color: rgba(207, 216, 230, 0.9);
+  border-radius: 18px;
+  box-shadow: 0 14px 30px rgba(22, 34, 51, 0.055);
+}
+
+.aiDetailedPanel table thead tr,
+.aiEvidenceCard table thead tr {
+  background: linear-gradient(180deg, #eef4ff, #f7faff);
+}
+
+.aiDetailedPanel table th,
+.aiEvidenceCard table th {
+  color: #16336f;
+}
+
+.aiRecommendationGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.aiRecommendationSection {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(207, 216, 230, 0.9);
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.74);
+}
+
+.aiRecommendationSectionHead .aiSectionTitle {
+  margin-bottom: 4px;
+}
+
+.aiCategorySub {
+  margin-bottom: 0;
+}
+
+.aiRecommendationCard {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(207, 216, 230, 0.9);
+  border-radius: 18px;
+  padding: 16px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  box-shadow: 0 12px 26px rgba(22, 34, 51, 0.052);
+}
+
+.aiRecommendationCard strong {
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+
+.aiScorelineText {
+  text-align: center;
+  font-weight: 950;
+  color: var(--text);
+  white-space: nowrap;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(33, 88, 245, 0.06);
+}
+
+.aiDeltaPositive {
+  color: var(--primary);
+  font-weight: 950;
+  text-align: center;
+}
+
+.aiDeltaNegative {
+  color: var(--danger);
+  font-weight: 950;
+  text-align: center;
+}
+
+.aiMobileList {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .navInner {
+    grid-template-columns: minmax(48px, 1fr) minmax(0, auto);
+    gap: 8px;
+  }
+
+  .navAccountLinks {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    justify-content: end;
+    gap: 6px;
+    max-width: 100%;
+  }
+
+  .navAccountLinks .pill {
+    max-width: 84px;
+    min-width: 0;
+    padding-inline: 9px;
+    text-align: center;
+  }
+
+  .navAccountLinks .pill:first-child {
+    max-width: 74px;
+  }
+
+  .navAccountLinks .navButton {
+    max-width: 74px;
+  }
+
+  .aiPage {
+    gap: 12px;
+  }
+
+  .aiControlCard,
+  .aiResultCard,
+  .aiEvidenceCard {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .aiTabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .aiTabButton {
+    width: 100%;
+    min-width: 0;
+    padding: 10px 6px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .aiFormGrid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .aiReadonlyField {
+    min-height: 42px;
+    padding: 9px 11px;
+  }
+
+  .aiSubmitButton {
+    min-height: 44px;
+  }
+
+  .aiEmptyState {
+    min-height: 130px;
+  }
+
+  .aiResultHead {
+    display: grid;
+    align-items: stretch;
+  }
+
+  .aiResultHead > .row {
+    width: 100%;
+    gap: 6px;
+  }
+
+  .aiResultHead .smallMuted {
+    font-size: 11px;
+  }
+
+  .aiSummary {
+    border-radius: 14px;
+    padding: 12px;
+    font-size: 16px;
+    line-height: 1.65;
+  }
+
+  .aiTextBlock {
+    padding: 10px 11px;
+    font-size: 13px;
+    line-height: 1.65;
+  }
+
+  .aiMetricGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .aiMetric {
+    min-height: 88px;
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .aiMetric span,
+  .aiMetric em {
+    font-size: 11px;
+  }
+
+  .aiMetric strong {
+    font-size: 20px;
+  }
+
+  .aiSectionTitle {
+    font-size: 15px;
+  }
+
+  .aiDetailedPanel,
+  .aiBaselinePanel {
+    gap: 12px;
+    padding-top: 14px;
+  }
+
+  .aiScoreGrid,
+  .aiRecommendationGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .aiRecommendationSection {
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .aiRecommendationCard {
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .aiRecommendationCard > .rowBetween {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .aiRecommendationCard .badge {
+    justify-content: center;
+    width: fit-content;
+    max-width: 100%;
+  }
+
+  .aiDesktopTableWrap {
+    display: none;
+  }
+
+  .aiMobileList {
+    display: grid;
+    gap: 10px;
+  }
+
+  .aiMobileCard,
+  .aiDeltaMobileGroup {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid rgba(207, 216, 230, 0.92);
+    border-radius: 15px;
+    background: #ffffff;
+    box-shadow: 0 8px 18px rgba(22, 34, 51, 0.045);
+  }
+
+  .aiMobileCardHead {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .aiMobileCardHead strong {
+    min-width: 0;
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.35;
+    font-weight: 950;
+    overflow-wrap: anywhere;
+  }
+
+  .aiMobileCardHead .badge {
+    flex: 0 0 auto;
+  }
+
+  .aiOutcome-win {
+    color: #137548;
+    border-color: rgba(19, 138, 76, 0.26);
+    background: rgba(19, 138, 76, 0.08);
+  }
+
+  .aiOutcome-loss {
+    color: var(--danger);
+    border-color: rgba(224, 68, 68, 0.22);
+    background: rgba(224, 68, 68, 0.08);
+  }
+
+  .aiMobileScore {
+    color: var(--text);
+    font-size: 17px;
+    line-height: 1.35;
+    font-weight: 950;
+    overflow-wrap: anywhere;
+  }
+
+  .aiMobileMetaGrid {
+    display: grid;
+    gap: 7px;
+  }
+
+  .aiMobileMetaGrid span {
+    display: grid;
+    grid-template-columns: 62px minmax(0, 1fr);
+    gap: 8px;
+    color: #4b5f7a;
+    font-size: 12px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  .aiMobileMetaGrid em {
+    color: var(--muted);
+    font-style: normal;
+    font-weight: 900;
+  }
+
+  .aiMobileReason {
+    margin: 0;
+    padding-top: 9px;
+    border-top: 1px dashed rgba(148, 163, 184, 0.34);
+    color: #4b5f7a;
+    font-size: 12px;
+    line-height: 1.55;
+    font-weight: 750;
+  }
+
+  .aiDeltaMobileList {
+    gap: 12px;
+  }
+
+  .aiDeltaMobileTitle {
+    color: #16336f;
+    font-size: 14px;
+    font-weight: 950;
+  }
+
+  .aiDeltaMobileRow {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr) 38px;
+    gap: 8px;
+    align-items: center;
+    padding: 9px 10px;
+    border-radius: 13px;
+    background: rgba(246, 248, 252, 0.82);
+  }
+
+  .aiDeltaMobileRow strong {
+    color: var(--text);
+    font-size: 12px;
+    line-height: 1.35;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  .aiScorelineText {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 380px) {
+  .navAccountLinks .pill {
+    max-width: 72px;
+    padding-inline: 7px;
+  }
+
+  .navAccountLinks .navButton {
+    max-width: 64px;
+  }
+
+  .aiMetricGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {

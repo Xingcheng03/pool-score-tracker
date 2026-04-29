@@ -52,6 +52,9 @@ export default function Navbar() {
 
         {isAuthenticated && (
           <div className="navAccountLinks">
+            <NavLink to="/ai-analysis" className={linkClass}>
+              AI 分析
+            </NavLink>
             <NavLink to={accountLink} className={linkClass}>
               {user?.username ?? "账号"}
             </NavLink>
