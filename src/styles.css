@@ -2236,43 +2236,47 @@ tbody tr:hover td {
   }
 
   .adminReportsTable td:nth-child(1)::before {
-    content: "Match";
+    content: "比赛";
   }
 
   .adminReportsTable td:nth-child(2)::before {
-    content: "Time";
+    content: "时间";
   }
 
   .adminReportsTable td:nth-child(3)::before {
-    content: "Tag";
+    content: "标签";
   }
 
   .adminReportsTable td:nth-child(4)::before {
-    content: "Left";
+    content: "左侧";
   }
 
   .adminReportsTable td:nth-child(5)::before {
-    content: "Score";
+    content: "比分";
   }
 
   .adminReportsTable td:nth-child(6)::before {
-    content: "Right";
+    content: "右侧";
   }
 
   .adminReportsTable td:nth-child(7)::before {
-    content: "Winner";
+    content: "胜者";
   }
 
   .adminReportsTable td:nth-child(8)::before {
-    content: "Reporter";
+    content: "放门";
   }
 
   .adminReportsTable td:nth-child(9)::before {
-    content: "Status";
+    content: "上报人";
   }
 
   .adminReportsTable td:nth-child(10)::before {
-    content: "Action";
+    content: "状态";
+  }
+
+  .adminReportsTable td:nth-child(11)::before {
+    content: "操作";
   }
 
   .adminReportsTable td[colspan],
@@ -2291,13 +2295,13 @@ tbody tr:hover td {
     display: none;
   }
 
-  .adminReportsTable td:nth-child(10) .row {
+  .adminReportsTable td:nth-child(11) .row {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
   }
 
-  .adminReportsTable td:nth-child(10) .btn {
+  .adminReportsTable td:nth-child(11) .btn {
     width: 100%;
   }
 }
