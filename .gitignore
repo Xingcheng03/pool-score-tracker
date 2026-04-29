@@ -16,6 +16,7 @@ dist-ssr
 !.env.example
 *.db
 *.db-journal
+backEnd/prisma/*backup*.json
 
 # Editor directories and files
 .vscode/*
