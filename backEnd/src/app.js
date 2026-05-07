@@ -3,6 +3,7 @@ import cors from "cors";
 import morgan from "morgan";
 import { env } from "./config/env.js";
 import { authRouter } from "./routes/auth.routes.js";
+import { aiRouter } from "./routes/ai.routes.js";
 import { dataRouter } from "./routes/data.routes.js";
 import { leaderboardRouter } from "./routes/leaderboard.routes.js";
 import { matchesRouter } from "./routes/matches.routes.js";
@@ -22,6 +23,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRouter);
+app.use("/api/ai", aiRouter);
 app.use("/api/players", playersRouter);
 app.use("/api/matches", matchesRouter);
 app.use("/api/match-reports", matchReportsRouter);
