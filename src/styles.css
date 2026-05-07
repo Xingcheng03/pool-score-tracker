@@ -2688,3 +2688,19 @@ tbody tr:hover td {
     max-width: 1680px;
   }
 }
+
+.leaderboardSpecialTitle {
+  font-weight: 900;
+  color: #e11d48;
+  text-shadow: 0 0 6px rgba(225, 29, 72, 0.55), 0 0 14px rgba(225, 29, 72, 0.35);
+  animation: leaderboardSpecialTitleBlink 1.1s ease-in-out infinite;
+}
+
+@keyframes leaderboardSpecialTitleBlink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}

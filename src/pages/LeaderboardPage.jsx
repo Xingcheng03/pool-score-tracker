@@ -9,6 +9,18 @@ function pct(value) {
   return `${(Number(value ?? 0) * 100).toFixed(1)}%`;
 }
 
+const SPECIAL_TITLES = {
+  "敏敏": "豆腐煲接全世界",
+};
+
+function renderPlayerName(name) {
+  const title = SPECIAL_TITLES[name];
+  if (!title) return name;
+  return (
+    <span className="leaderboardSpecialTitle">{title}——{name}</span>
+  );
+}
+
 function tierStyle(tier) {
   if (String(tier ?? "").includes("大匕首")) {
     return {
@@ -121,7 +133,7 @@ export default function LeaderboardPage() {
                     <div className="leaderboardTopCardHeader">
                       <div className={`leaderboardTopCardRankNum leaderboardTopCardRankNum${rank}`}>{rank}</div>
                       <Link className="leaderboardTopCardName" to={`/players/${row.id}${seasonQuery}`}>
-                        {row.name}
+                        {renderPlayerName(row.name)}
                       </Link>
                       {rank === 1 && <div className="leaderboardTopCardTrophy">{"\uD83C\uDFC6"}</div>}
                     </div>
@@ -171,7 +183,7 @@ export default function LeaderboardPage() {
                   tableRows.map((row, idx) => (
                     <tr key={row.id}>
                       <td>{topThree.length + idx + 1}</td>
-                      <td style={{ fontWeight: 700 }}><Link to={`/players/${row.id}${seasonQuery}`}>{row.name}</Link></td>
+                      <td style={{ fontWeight: 700 }}><Link to={`/players/${row.id}${seasonQuery}`}>{renderPlayerName(row.name)}</Link></td>
                       <td>{Math.round(row.rating)}</td>
                       <td style={tierStyle(row.tier)}>{row.tier}</td>
                       <td>{row.confidence} · {row.effMatches}场 / {row.racks}局</td>
