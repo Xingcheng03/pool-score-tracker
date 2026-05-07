@@ -17,7 +17,7 @@ function renderPlayerName(name) {
   const title = SPECIAL_TITLES[name];
   if (!title) return name;
   return (
-    <span className="leaderboardSpecialTitle">{title}——{name}</span>
+    <span className="leaderboardSpecialTitle">{title}-{name}</span>
   );
 }
 
