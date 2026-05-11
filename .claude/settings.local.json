@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(git diff *)",
-      "Read(//c/Users/qxc03/AppData/Local/Temp/**)"
+      "Read(//c/Users/qxc03/AppData/Local/Temp/**)",
+      "Bash(python -c \"import pptx; print\\('python-pptx', pptx.__version__\\)\")",
+      "PowerShell(python --version; python -c \"import pptx; print\\('python-pptx', pptx.__version__\\)\")",
+      "PowerShell(py *)",
+      "Bash(npm init *)",
+      "Bash(npm install *)",
+      "Bash(node build.mjs)"
     ]
   }
 }

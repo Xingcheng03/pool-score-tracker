@@ -1388,7 +1388,7 @@ tbody tr:hover td {
   }
 
   .navAccountLinks .pill {
-    max-width: 96px;
+    max-width: 140px;
     overflow: hidden;
     text-overflow: ellipsis;
   }
@@ -1827,6 +1827,9 @@ tbody tr:hover td {
 
 .aiTabButton {
   min-width: 124px;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.2;
 }
 
 .aiFormGrid {
@@ -2315,7 +2318,9 @@ tbody tr:hover td {
     min-width: 0;
     padding: 10px 6px;
     font-size: 12px;
-    white-space: nowrap;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.2;
   }
 
   .aiFormGrid {
@@ -3260,6 +3265,13 @@ tbody tr:hover td {
     min-height: 40px;
     padding: 9px 10px;
     font-size: 12px;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.2;
+    text-align: center;
+  }
+
+  .playerAccountCell .badge {
     white-space: nowrap;
   }
 
@@ -3297,7 +3309,10 @@ tbody tr:hover td {
     min-height: 48px;
     padding: 9px 8px;
     font-size: 12px;
-    white-space: nowrap;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.2;
+    text-align: center;
   }
 
   .matchesActionsRow {
@@ -3556,6 +3571,31 @@ tbody tr:hover td {
   line-height: 1;
   min-width: 38px;
   font-family: inherit;
+}
+
+.navLangToggleDrawer {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .navLangToggle {
+    display: none;
+  }
+
+  .navLinks .navLangToggleDrawer {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: auto;
+    width: 100%;
+    padding: 13px 14px;
+    border-radius: 16px;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 0.3px;
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.82);
+  }
 }
 
 .leaderboardSpecialTitle {

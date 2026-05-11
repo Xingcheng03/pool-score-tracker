@@ -86,6 +86,14 @@ export default function Navbar() {
               {t("登录", "Login")}
             </NavLink>
           )}
+          <button
+            className="pill navLangToggleDrawer"
+            type="button"
+            onClick={toggleLang}
+            aria-label={t("切换语言", "Toggle language")}
+          >
+            {lang === "en" ? "切换到中文" : "Switch to English"}
+          </button>
         </div>
 
         {isAuthenticated && (
