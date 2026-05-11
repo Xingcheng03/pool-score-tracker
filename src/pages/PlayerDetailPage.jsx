@@ -2,9 +2,9 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/useAuth.js";
 import AccountSettingsForm from "../components/AccountSettingsForm.jsx";
-import { INTERNAL_POINTS_NAME } from "../constants/labels.js";
 import { buildQuery } from "../lib/api.js";
 import { cachedApiRequest } from "../lib/apiCache.js";
+import { useT } from "../lib/i18n.jsx";
 
 function formatCount(value) {
   if (!Number.isFinite(value)) return "0";
@@ -52,13 +52,14 @@ function buildLinePath(points) {
 }
 
 function OpponentCard({ title, list, players, seasonQuery }) {
+  const t = useT();
   return (
     <div className="card playerDetailOpponentCard">
       <div className="rowBetween playerDetailCardHead">
         <div className="badge">{title}</div>
       </div>
       {list.length === 0 ? (
-        <div className="playerDetailEmpty">暂无</div>
+        <div className="playerDetailEmpty">{t("暂无", "None")}</div>
       ) : (
         <ul className="playerDetailOpponentList">
           {list.map((item) => (
@@ -74,31 +75,32 @@ function OpponentCard({ title, list, players, seasonQuery }) {
 }
 
 function MatchTable({ stats, playerId, players, seasonQuery }) {
+  const t = useT();
   return (
     <div className="card playerDetailTableCard">
       <div className="rowBetween playerDetailCardHead">
-        <div className="badge">比赛记录</div>
-        <div className="badge">共 {stats.matches.length} 场</div>
+        <div className="badge">{t("比赛记录", "Match Records")}</div>
+        <div className="badge">{t(`共 ${stats.matches.length} 场`, `${stats.matches.length} matches total`)}</div>
       </div>
 
       <div className="tableWrap playerDetailTableWrap">
         <table className="playerDetailTable">
           <thead>
             <tr>
-              <th>比赛名称</th>
-              <th>时间</th>
-              <th>赛制</th>
-              <th>对手</th>
-              <th>比分</th>
-              <th>放门</th>
-              <th>放门方</th>
-              <th>结果</th>
+              <th>{t("比赛名称", "Match Name")}</th>
+              <th>{t("时间", "Time")}</th>
+              <th>{t("赛制", "Format")}</th>
+              <th>{t("对手", "Opponent")}</th>
+              <th>{t("比分", "Score")}</th>
+              <th>{t("放门", "Handicap")}</th>
+              <th>{t("放门方", "Giver")}</th>
+              <th>{t("结果", "Result")}</th>
             </tr>
           </thead>
           <tbody>
             {stats.matches.length === 0 ? (
               <tr>
-                <td colSpan="8" className="playerDetailEmpty">暂无记录</td>
+                <td colSpan="8" className="playerDetailEmpty">{t("暂无记录", "No records")}</td>
               </tr>
             ) : (
               stats.matches.map((match) => {
@@ -110,12 +112,12 @@ function MatchTable({ stats, playerId, players, seasonQuery }) {
 
                 return (
                   <tr key={match.id}>
-                    <td className="playerDetailMatchName">{match.matchName ?? "未命名比赛"}</td>
+                    <td className="playerDetailMatchName">{match.matchName ?? t("未命名比赛", "Untitled Match")}</td>
                     <td>{formatDate(match.dateISO)}</td>
-                    <td>抢 {match.raceTo}</td>
+                    <td>{t(`抢 ${match.raceTo}`, `Race to ${match.raceTo}`)}</td>
                     <td><Link to={`/players/${opponentId}${seasonQuery}`}>{playerName(players, opponentId)}</Link></td>
                     <td>{meScore} : {opponentScore}</td>
-                    <td>{match.isHandicap ? "是" : "否"}</td>
+                    <td>{match.isHandicap ? t("是", "Yes") : t("否", "No")}</td>
                     <td>{match.isHandicap ? playerName(players, match.handicapGiverId) : "-"}</td>
                     <td className="playerDetailResult">{result}</td>
                   </tr>
@@ -130,25 +132,26 @@ function MatchTable({ stats, playerId, players, seasonQuery }) {
 }
 
 function Section({ title, stats, playerId, players, seasonQuery }) {
+  const t = useT();
   return (
     <section className="card playerDetailSection">
       <div className="rowBetween playerDetailSectionHead">
         <div className="badge">{title}</div>
-        <Link className="btn btnBrand" to="/new">上报比赛</Link>
+        <Link className="btn btnBrand" to="/new">{t("上报比赛", "Submit Match")}</Link>
       </div>
 
       <div className="playerDetailSplit">
         <div className="playerDetailStatsColumn">
           <div className="playerDetailKpiGrid">
-            <SummaryCard label="总场次" value={formatCount(stats.total)} />
-            <SummaryCard label="胜场" value={formatCount(stats.wins)} />
-            <SummaryCard label="负场" value={formatCount(stats.losses)} />
-            <SummaryCard label="胜率" value={formatPercent(stats.winRate)} />
+            <SummaryCard label={t("总场次", "Total")} value={formatCount(stats.total)} />
+            <SummaryCard label={t("胜场", "Wins")} value={formatCount(stats.wins)} />
+            <SummaryCard label={t("负场", "Losses")} value={formatCount(stats.losses)} />
+            <SummaryCard label={t("胜率", "Win Rate")} value={formatPercent(stats.winRate)} />
           </div>
 
           <div className="playerDetailOpponentGrid">
-            <OpponentCard title="战胜的对手（次数）" list={stats.beatenList} players={players} seasonQuery={seasonQuery} />
-            <OpponentCard title="战败的对手（次数）" list={stats.lostToList} players={players} seasonQuery={seasonQuery} />
+            <OpponentCard title={t("战胜的对手（次数）", "Beaten Opponents (count)")} list={stats.beatenList} players={players} seasonQuery={seasonQuery} />
+            <OpponentCard title={t("战败的对手（次数）", "Lost-To Opponents (count)")} list={stats.lostToList} players={players} seasonQuery={seasonQuery} />
           </div>
         </div>
 
@@ -159,6 +162,7 @@ function Section({ title, stats, playerId, players, seasonQuery }) {
 }
 
 function RatingHistory({ history, players }) {
+  const t = useT();
   const [hoveredPoint, setHoveredPoint] = useState(null);
   const rawHistoryPoints = useMemo(() => history.points ?? [], [history.points]);
   const chart = useMemo(() => {
@@ -227,13 +231,16 @@ function RatingHistory({ history, players }) {
     <section className="card playerFargoCard">
       <div className="playerFargoHead">
         <div>
-          <div className="badge">全部比赛{INTERNAL_POINTS_NAME}历史走势</div>
+          <div className="badge">{t(
+            "全部比赛街灯榜历史走势",
+            "All-Match Street Light Leaderboard History",
+          )}</div>
         </div>
         <div className="playerFargoMeta">
-          <div className="playerFargoStat"><span className="playerFargoStatLabel">起始</span><span className="playerFargoStatValue">{formatRating(history.startRating)}</span></div>
-          <div className="playerFargoStat"><span className="playerFargoStatLabel">当前</span><span className="playerFargoStatValue">{formatRating(history.currentRating)}</span></div>
+          <div className="playerFargoStat"><span className="playerFargoStatLabel">{t("起始", "Start")}</span><span className="playerFargoStatValue">{formatRating(history.startRating)}</span></div>
+          <div className="playerFargoStat"><span className="playerFargoStatLabel">{t("当前", "Current")}</span><span className="playerFargoStatValue">{formatRating(history.currentRating)}</span></div>
           <div className="playerFargoStat">
-            <span className="playerFargoStatLabel">净变化</span>
+            <span className="playerFargoStatLabel">{t("净变化", "Net Change")}</span>
             <span className={`playerFargoStatValue ${history.netChange > 0 ? "isUp" : history.netChange < 0 ? "isDown" : ""}`}>
               {formatSignedRating(history.netChange)}
             </span>
@@ -242,7 +249,7 @@ function RatingHistory({ history, players }) {
       </div>
 
       {rawHistoryPoints.length === 0 ? (
-        <div className="playerFargoEmpty">暂无积分历史。</div>
+        <div className="playerFargoEmpty">{t("暂无积分历史。", "No rating history yet.")}</div>
       ) : (
         <div className="playerFargoCanvas" onMouseLeave={() => setHoveredPoint(null)}>
           <svg className="playerFargoSvg" viewBox={`0 0 ${chart.width} ${chart.height}`} role="img" aria-label="Rating history chart">
@@ -315,14 +322,14 @@ function RatingHistory({ history, players }) {
                 top: `${Math.min(66, Math.max(8, hoveredPoint.tooltipY))}%`,
               }}
             >
-              <div className="playerFargoTooltipDate">{hoveredPoint.isStart ? "起始 Rating" : formatDate(hoveredPoint.dateISO)}</div>
+              <div className="playerFargoTooltipDate">{hoveredPoint.isStart ? t("起始 Rating", "Start Rating") : formatDate(hoveredPoint.dateISO)}</div>
               <div className="playerFargoTooltipMetrics">
                 <div className="playerFargoTooltipMetric">
                   <span>Rating</span>
                   <strong>{formatRating(hoveredPoint.rating)}</strong>
                 </div>
                 <div className="playerFargoTooltipMetric">
-                  <span>变化</span>
+                  <span>{t("变化", "Change")}</span>
                   <strong className={hoveredPoint.delta > 0 ? "isUp" : hoveredPoint.delta < 0 ? "isDown" : ""}>
                     {formatSignedRating(hoveredPoint.delta)}
                   </strong>
@@ -331,7 +338,7 @@ function RatingHistory({ history, players }) {
               {!hoveredPoint.isStart && (
                 <>
                   <div className="playerFargoTooltipInfo">
-                    {hoveredPoint.tag === "live" ? "直播" : "练习赛"} · 对手 {playerName(players, hoveredPoint.opponentId)} · {hoveredPoint.myScore} : {hoveredPoint.opponentScore}
+                    {hoveredPoint.tag === "live" ? t("直播", "Live") : t("练习赛", "Practice")} · {t("对手", "Opponent")} {playerName(players, hoveredPoint.opponentId)} · {hoveredPoint.myScore} : {hoveredPoint.opponentScore}
                   </div>
                   <div className="playerFargoTooltipMatch">{hoveredPoint.matchName}</div>
                 </>
@@ -346,6 +353,7 @@ function RatingHistory({ history, players }) {
 export default function PlayerDetailPage() {
   const { playerId } = useParams();
   const { user } = useAuth();
+  const t = useT();
   const [searchParams, setSearchParams] = useSearchParams();
   const [players, setPlayers] = useState([]);
   const [seasons, setSeasons] = useState([]);
@@ -387,33 +395,36 @@ export default function PlayerDetailPage() {
     setSearchParams(nextParams, { replace: true });
   }
 
-  if (loading) return <div className="card">加载中...</div>;
+  if (loading) return <div className="card">{t("加载中...", "Loading...")}</div>;
   if (error) return <div className="errorBox">{error}</div>;
-  if (!data?.player) return <div className="card">球员不存在。</div>;
+  if (!data?.player) return <div className="card">{t("球员不存在。", "Player not found.")}</div>;
 
   return (
     <div>
       <div className="playerDetailHero">
         <div className="playerDetailTitleBlock">
           <h1 className="h1">{data.player.name}</h1>
-          <p className="sub">分标签战绩：练习赛 + 直播。数据来自正式比赛记录。</p>
+          <p className="sub">{t(
+            "分标签战绩：练习赛 + 直播。数据来自正式比赛记录。",
+            "Per-tag records: Practice + Live. Data sourced from official match records.",
+          )}</p>
         </div>
 
         {isOwnPlayerPage && <AccountSettingsForm compact />}
 
         <div className="row playerDetailControls">
           <select className="input playerDetailSeasonSelect" value={selectedSeasonId} onChange={(event) => handleSeasonChange(event.target.value)}>
-            <option value="all">全部赛季</option>
+            <option value="all">{t("全部赛季", "All seasons")}</option>
             {seasons.map((season) => <option key={season.id} value={season.id}>{season.label}</option>)}
           </select>
-          <button className="btn playerDetailRefreshButton" onClick={() => load(true)} type="button">刷新</button>
-          <Link className="btn playerDetailBackButton" to="/players">返回</Link>
+          <button className="btn playerDetailRefreshButton" onClick={() => load(true)} type="button">{t("刷新", "Refresh")}</button>
+          <Link className="btn playerDetailBackButton" to="/players">{t("返回", "Back")}</Link>
         </div>
       </div>
 
       <RatingHistory history={data.fargoHistory} players={players} />
-      <Section title="练习赛统计与记录" stats={data.practice} playerId={playerId} players={players} seasonQuery={seasonQuery} />
-      <Section title="直播统计与记录" stats={data.live} playerId={playerId} players={players} seasonQuery={seasonQuery} />
+      <Section title={t("练习赛统计与记录", "Practice Stats & Records")} stats={data.practice} playerId={playerId} players={players} seasonQuery={seasonQuery} />
+      <Section title={t("直播统计与记录", "Live Stats & Records")} stats={data.live} playerId={playerId} players={players} seasonQuery={seasonQuery} />
     </div>
   );
 }

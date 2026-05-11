@@ -4,9 +4,11 @@ import { useAuth } from "../auth/useAuth.js";
 import ConfirmButton from "../components/ConfirmButton.jsx";
 import { apiRequest, jsonBody } from "../lib/api.js";
 import { cachedApiRequest, invalidateApiCache, invalidatePoolDataCache } from "../lib/apiCache.js";
+import { useT } from "../lib/i18n.jsx";
 
 export default function PlayersPage() {
   const { isAdmin } = useAuth();
+  const t = useT();
   const [players, setPlayers] = useState([]);
   const [newName, setNewName] = useState("");
   const [loading, setLoading] = useState(true);
@@ -46,16 +48,16 @@ export default function PlayersPage() {
 
   return (
     <div>
-      <h1 className="h1">球员</h1>
+      <h1 className="h1">{t("球员", "Players")}</h1>
 
       {isAdmin && (
         <div className="card playerAddCard" style={{ marginBottom: 14 }}>
           <div className="row playerAddRow">
             <div className="playerAddInputWrap" style={{ flex: 1, minWidth: 240 }}>
-              <input className="input" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="输入新球员名称" />
+              <input className="input" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder={t("输入新球员名称", "Enter new player name")} />
             </div>
             <button className="btn btnBrand playerAddButton" type="button" onClick={addPlayer}>
-              添加球员
+              {t("添加球员", "Add Player")}
             </button>
           </div>
         </div>
@@ -63,30 +65,30 @@ export default function PlayersPage() {
 
       <div className="card">
         <div className="rowBetween" style={{ marginBottom: 12 }}>
-          <div className="badge">球员数：{players.length}</div>
-          <button className="btn" onClick={() => load(true)} type="button">刷新</button>
+          <div className="badge">{t(`球员数：${players.length}`, `Players: ${players.length}`)}</div>
+          <button className="btn" onClick={() => load(true)} type="button">{t("刷新", "Refresh")}</button>
         </div>
 
         {error && <div className="errorBox" style={{ marginBottom: 12 }}>{error}</div>}
 
         {loading ? (
-          <div className="sub">加载中...</div>
+          <div className="sub">{t("加载中...", "Loading...")}</div>
         ) : (
           <div className="tableWrap">
             <table className="playersTable">
               <thead>
                 <tr>
-                  <th>名称</th>
-                  <th>查看</th>
-                  {isAdmin && <th>账号</th>}
-                  {isAdmin && <th>改名</th>}
-                  {isAdmin && <th>删除</th>}
+                  <th>{t("名称", "Name")}</th>
+                  <th>{t("查看", "View")}</th>
+                  {isAdmin && <th>{t("账号", "Account")}</th>}
+                  {isAdmin && <th>{t("改名", "Rename")}</th>}
+                  {isAdmin && <th>{t("删除", "Delete")}</th>}
                 </tr>
               </thead>
               <tbody>
                 {players.length === 0 ? (
                   <tr>
-                    <td colSpan={isAdmin ? "5" : "2"} style={{ color: "var(--muted)" }}>暂无球员。</td>
+                    <td colSpan={isAdmin ? "5" : "2"} style={{ color: "var(--muted)" }}>{t("暂无球员。", "No players yet.")}</td>
                   </tr>
                 ) : (
                   players.map((player) => (
@@ -103,6 +105,7 @@ export default function PlayersPage() {
 }
 
 function PlayerRow({ player, isAdmin, onReload, onDelete }) {
+  const t = useT();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(player.name);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -142,25 +145,25 @@ function PlayerRow({ player, isAdmin, onReload, onDelete }) {
         <Link to={`/players/${player.id}`}>{player.name}</Link>
       </td>
       <td className="playerViewCell">
-        <Link className="btn" to={`/players/${player.id}`}>进入详情</Link>
+        <Link className="btn" to={`/players/${player.id}`}>{t("进入详情", "View Details")}</Link>
       </td>
       {isAdmin && (
         <td className="playerAccountCell">
           {!accountOpen ? (
             <div className="row">
-              <span className="badge">{player.account ? player.account.username : "未绑定账号"}</span>
+              <span className="badge">{player.account ? player.account.username : t("未绑定账号", "No account linked")}</span>
               <button className="btn" type="button" onClick={() => setAccountOpen(true)}>
-                {player.account ? "重置账号" : "设置账号"}
+                {player.account ? t("重置账号", "Reset Account") : t("设置账号", "Set Account")}
               </button>
             </div>
           ) : (
             <div className="formStack compactForm">
-              <input className="input" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="用户名" />
-              <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={player.account ? "新密码（可留空仅改用户名）" : "新账号必填；绑定已有账号可留空"} />
+              <input className="input" value={username} onChange={(e) => setUsername(e.target.value)} placeholder={t("用户名", "Username")} />
+              <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={player.account ? t("新密码（可留空仅改用户名）", "New password (leave blank to only change username)") : t("新账号必填；绑定已有账号可留空", "Required for new account; leave blank to bind existing")} />
               {error && <div className="errorBox">{error}</div>}
               <div className="row">
-                <button className="btn btnBrand" type="button" onClick={saveAccount}>保存账号</button>
-                <button className="btn" type="button" onClick={() => setAccountOpen(false)}>取消</button>
+                <button className="btn btnBrand" type="button" onClick={saveAccount}>{t("保存账号", "Save Account")}</button>
+                <button className="btn" type="button" onClick={() => setAccountOpen(false)}>{t("取消", "Cancel")}</button>
               </div>
             </div>
           )}
@@ -169,20 +172,20 @@ function PlayerRow({ player, isAdmin, onReload, onDelete }) {
       {isAdmin && (
         <td className="playerRenameCell">
           {!editing ? (
-            <button className="btn" type="button" onClick={() => setEditing(true)}>改名</button>
+            <button className="btn" type="button" onClick={() => setEditing(true)}>{t("改名", "Rename")}</button>
           ) : (
             <div className="row">
               <input className="input" style={{ minWidth: 160 }} value={name} onChange={(e) => setName(e.target.value)} />
-              <button className="btn btnBrand" type="button" onClick={saveName}>保存</button>
-              <button className="btn" type="button" onClick={() => { setName(player.name); setEditing(false); }}>取消</button>
+              <button className="btn btnBrand" type="button" onClick={saveName}>{t("保存", "Save")}</button>
+              <button className="btn" type="button" onClick={() => { setName(player.name); setEditing(false); }}>{t("取消", "Cancel")}</button>
             </div>
           )}
         </td>
       )}
       {isAdmin && (
         <td className="playerDeleteCell">
-          <ConfirmButton confirmText={`确定删除球员 ${player.name} 吗？`} onConfirm={() => onDelete(player.id)}>
-            删除
+          <ConfirmButton confirmText={t(`确定删除球员 ${player.name} 吗？`, `Delete player ${player.name}?`)} onConfirm={() => onDelete(player.id)}>
+            {t("删除", "Delete")}
           </ConfirmButton>
         </td>
       )}

@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/useAuth.js";
+import { useT } from "../lib/i18n.jsx";
 
 export default function LoginPage() {
   const { isAuthenticated, login } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const t = useT();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -37,21 +39,24 @@ export default function LoginPage() {
       <div className="card authCard">
         <div className="authBrandMark">
           <span className="brandDot" />
-          <span>街灯</span>
+          <span>{t("街灯", "Street Light")}</span>
         </div>
 
-        <div className="badge authModeBadge">账号登录</div>
-        <h1 className="h1 authTitle">欢迎回来</h1>
-        <p className="authSubtitle">登录后查看比赛、球员和街灯榜。</p>
+        <div className="badge authModeBadge">{t("账号登录", "Account Login")}</div>
+        <h1 className="h1 authTitle">{t("欢迎回来", "Welcome back")}</h1>
+        <p className="authSubtitle">{t(
+          "登录后查看比赛、球员和街灯榜。",
+          "Log in to view matches, players, and the Street Light Leaderboard.",
+        )}</p>
 
         <form onSubmit={onSubmit} className="formStack authForm">
           <div>
-            <div className="smallMuted authLabel">用户名</div>
+            <div className="smallMuted authLabel">{t("用户名", "Username")}</div>
             <input className="input authInput" value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" />
           </div>
 
           <div>
-            <div className="smallMuted authLabel">密码</div>
+            <div className="smallMuted authLabel">{t("密码", "Password")}</div>
             <input
               className="input authInput"
               type="password"
@@ -64,7 +69,7 @@ export default function LoginPage() {
           {error && <div className="errorBox">{error}</div>}
 
           <button className="btn btnBrand authSubmitButton" type="submit" disabled={saving || !username.trim() || !password}>
-            {saving ? "处理中..." : "登录"}
+            {saving ? t("处理中...", "Submitting...") : t("登录", "Login")}
           </button>
         </form>
       </div>

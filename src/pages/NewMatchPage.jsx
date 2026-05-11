@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/useAuth.js";
 import { apiRequest, jsonBody } from "../lib/api.js";
 import { cachedApiRequest, invalidateApiCache } from "../lib/apiCache.js";
+import { useT } from "../lib/i18n.jsx";
 
 function pad2(n) {
   return String(n).padStart(2, "0");
@@ -22,6 +23,7 @@ function defaultMatchName(tag, leftName, rightName) {
 export default function NewMatchPage() {
   const nav = useNavigate();
   const { user, isAdmin } = useAuth();
+  const t = useT();
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -142,7 +144,7 @@ export default function NewMatchPage() {
       });
 
       invalidateApiCache(["/match-reports"]);
-      alert("比赛分数已上报，等待管理员审核。");
+      alert(t("比赛分数已上报，等待管理员审核。", "Match score submitted, awaiting admin review."));
       nav("/matches");
     } catch (err) {
       setError(err?.message ?? String(err));
@@ -151,19 +153,22 @@ export default function NewMatchPage() {
     }
   }
 
-  if (loading) return <div className="card">加载球员中...</div>;
+  if (loading) return <div className="card">{t("加载球员中...", "Loading players...")}</div>;
 
   return (
     <div>
-      <h1 className="h1">上报比赛</h1>
-      <p className="sub">球员提交的比分会进入待审核队列，管理员通过后才会写入正式比赛记录并影响排行榜。</p>
+      <h1 className="h1">{t("上报比赛", "Submit Match")}</h1>
+      <p className="sub">{t(
+        "球员提交的比分会进入待审核队列，管理员通过后才会写入正式比赛记录并影响排行榜。",
+        "Player-submitted scores enter a review queue; only after admin approval do they become official matches and affect the leaderboard.",
+      )}</p>
 
       {error && <div className="errorBox" style={{ marginBottom: 14 }}>{error}</div>}
 
       <div className="card" style={{ marginBottom: 14 }}>
         <div className="row" style={{ marginBottom: 12 }}>
           <div style={{ flex: 1, minWidth: 260 }}>
-            <div className="smallMuted">比赛名称</div>
+            <div className="smallMuted">{t("比赛名称", "Match Name")}</div>
             <input
               className="input"
               value={matchName}
@@ -178,20 +183,26 @@ export default function NewMatchPage() {
         <div className="row" style={{ gap: 12, alignItems: "center", marginBottom: 12 }}>
           <label className="row" style={{ gap: 8, cursor: "pointer", userSelect: "none" }}>
             <input type="checkbox" checked={isHandicap} onChange={(e) => setIsHandicap(e.target.checked)} />
-            <span style={{ fontWeight: 900 }}>放门</span>
+            <span style={{ fontWeight: 900 }}>{t("放门", "Handicap")}</span>
           </label>
           <div className="badge" style={{ marginLeft: "auto" }}>
-            {isHandicap ? "开启：按现有放门折算逻辑计算" : "未开启"}
+            {isHandicap ? t("开启：按现有放门折算逻辑计算", "On: uses handicap weighting") : t("未开启", "Off")}
           </div>
         </div>
 
         {isHandicap && (
           <div className="row" style={{ gap: 10, alignItems: "flex-end", marginBottom: 12 }}>
             <div style={{ flex: 1, minWidth: 320 }}>
-              <div className="smallMuted">谁给谁放门</div>
+              <div className="smallMuted">{t("谁给谁放门", "Who gives the handicap")}</div>
               <select className="input" value={handicapGiverSide} onChange={(e) => setHandicapGiverSide(e.target.value)} disabled={!bothSelected || samePlayer}>
-                <option value="left">{`${leftPlayer?.name ?? "左侧"} 给 ${rightPlayer?.name ?? "右侧"} 放门`}</option>
-                <option value="right">{`${rightPlayer?.name ?? "右侧"} 给 ${leftPlayer?.name ?? "左侧"} 放门`}</option>
+                <option value="left">{t(
+                  `${leftPlayer?.name ?? "左侧"} 给 ${rightPlayer?.name ?? "右侧"} 放门`,
+                  `${leftPlayer?.name ?? "Left"} gives handicap to ${rightPlayer?.name ?? "Right"}`,
+                )}</option>
+                <option value="right">{t(
+                  `${rightPlayer?.name ?? "右侧"} 给 ${leftPlayer?.name ?? "左侧"} 放门`,
+                  `${rightPlayer?.name ?? "Right"} gives handicap to ${leftPlayer?.name ?? "Left"}`,
+                )}</option>
               </select>
             </div>
           </div>
@@ -199,42 +210,42 @@ export default function NewMatchPage() {
 
         <div className="row" style={{ alignItems: "flex-end" }}>
           <div className="matchField matchLeftField" style={{ flex: 1, minWidth: 220 }}>
-            <div className="smallMuted">左侧球员</div>
+            <div className="smallMuted">{t("左侧球员", "Left Player")}</div>
             <select className="input" value={leftPlayerId} onChange={(e) => onChangeLeftPlayer(e.target.value)} disabled={isPlayerLockedToLeft}>
-              <option value="">请选择</option>
+              <option value="">{t("请选择", "Please select")}</option>
               {players.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
 
           <div className="matchField matchRaceField" style={{ width: 140, minWidth: 140 }}>
-            <div className="smallMuted">抢几</div>
+            <div className="smallMuted">{t("抢几", "Race To")}</div>
             <input className="input" type="number" min="1" value={raceTo} onChange={(e) => setRaceTo(Number(e.target.value))} />
           </div>
 
           <div className="matchField matchTagField" style={{ width: 200, minWidth: 200 }}>
-            <div className="smallMuted">标签</div>
+            <div className="smallMuted">{t("标签", "Tag")}</div>
             <select className="input" value={tag} onChange={(e) => onChangeTag(e.target.value)}>
-              <option value="practice">练习赛</option>
-              <option value="live">直播</option>
+              <option value="practice">{t("练习赛", "Practice")}</option>
+              <option value="live">{t("直播", "Live")}</option>
             </select>
           </div>
 
           <div className="matchField matchTimeField" style={{ width: 240, minWidth: 240 }}>
-            <div className="smallMuted">比赛时间</div>
+            <div className="smallMuted">{t("比赛时间", "Match Time")}</div>
             <input className="input" type="datetime-local" value={matchDateTimeLocal} onChange={(e) => setMatchDateTimeLocal(e.target.value)} />
           </div>
 
           <div className="matchField matchRightField" style={{ flex: 1, minWidth: 220 }}>
-            <div className="smallMuted">右侧球员</div>
+            <div className="smallMuted">{t("右侧球员", "Right Player")}</div>
             <select className="input" value={rightPlayerId} onChange={(e) => onChangeRightPlayer(e.target.value)}>
-              <option value="">请选择</option>
+              <option value="">{t("请选择", "Please select")}</option>
               {players.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
         </div>
 
-        {samePlayer && <div style={{ marginTop: 10, color: "var(--danger)", fontWeight: 900 }}>左右不能选择同一个球员。</div>}
-        {!hasTwoPlayers && <div style={{ marginTop: 10, color: "var(--muted)" }}>需要至少 2 个球员才能上报比赛。</div>}
+        {samePlayer && <div style={{ marginTop: 10, color: "var(--danger)", fontWeight: 900 }}>{t("左右不能选择同一个球员。", "Left and right cannot be the same player.")}</div>}
+        {!hasTwoPlayers && <div style={{ marginTop: 10, color: "var(--muted)" }}>{t("需要至少 2 个球员才能上报比赛。", "Need at least 2 players to submit a match.")}</div>}
       </div>
 
       <div className="card">
@@ -250,12 +261,12 @@ export default function NewMatchPage() {
           </div>
 
           <div className="card centerBox">
-            <div className="badge">{matchName.trim() || "未命名比赛"}</div>
-            <div className="badge">标签：{tag === "live" ? "直播" : "练习赛"}</div>
-            <div className="badge">抢 {raceTo}</div>
-            <div className="badge">放门：{isHandicap ? "是" : "否"}</div>
-            <button className="btn" type="button" onClick={() => { setLeftScore(0); setRightScore(0); }} disabled={!hasTwoPlayers}>重置比分</button>
-            {winner && <div style={{ marginTop: 4, fontWeight: 1000 }}>当前胜者：{winner === "left" ? leftPlayer?.name : rightPlayer?.name}</div>}
+            <div className="badge">{matchName.trim() || t("未命名比赛", "Untitled Match")}</div>
+            <div className="badge">{t("标签", "Tag")}: {tag === "live" ? t("直播", "Live") : t("练习赛", "Practice")}</div>
+            <div className="badge">{t(`抢 ${raceTo}`, `Race to ${raceTo}`)}</div>
+            <div className="badge">{t("放门", "Handicap")}: {isHandicap ? t("是", "Yes") : t("否", "No")}</div>
+            <button className="btn" type="button" onClick={() => { setLeftScore(0); setRightScore(0); }} disabled={!hasTwoPlayers}>{t("重置比分", "Reset Score")}</button>
+            {winner && <div style={{ marginTop: 4, fontWeight: 1000 }}>{t("当前胜者", "Current Winner")}: {winner === "left" ? leftPlayer?.name : rightPlayer?.name}</div>}
           </div>
 
           <div className="card">
@@ -270,11 +281,11 @@ export default function NewMatchPage() {
         </div>
 
         <div className="rowBetween" style={{ marginTop: 14 }}>
-          <div className="badge">当前比分：{leftScore} : {rightScore}</div>
+          <div className="badge">{t("当前比分", "Current Score")}: {leftScore} : {rightScore}</div>
           <div className="row">
-            <button className="btn" type="button" onClick={() => nav("/matches")}>取消</button>
+            <button className="btn" type="button" onClick={() => nav("/matches")}>{t("取消", "Cancel")}</button>
             <button className="btn btnBrand" type="button" disabled={invalid || saving} onClick={onSave}>
-              {saving ? "上报中..." : "提交审核"}
+              {saving ? t("上报中...", "Submitting...") : t("提交审核", "Submit for Review")}
             </button>
           </div>
         </div>

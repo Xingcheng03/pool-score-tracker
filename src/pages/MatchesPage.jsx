@@ -1,9 +1,10 @@
-﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/useAuth.js";
 import ConfirmButton from "../components/ConfirmButton.jsx";
 import { apiRequest, downloadJson, jsonBody } from "../lib/api.js";
 import { cachedApiRequest, invalidatePoolDataCache } from "../lib/apiCache.js";
+import { useT } from "../lib/i18n.jsx";
 
 const MATCH_PAGE_SIZE = 50;
 
@@ -16,15 +17,6 @@ function playerName(playerMap, id) {
   return playerMap.get(id) ?? "Unknown";
 }
 
-function tagLabel(tag) {
-  return tag === "live" ? "直播" : "练习赛";
-}
-
-function handicapDetail(match, playerMap) {
-  if (!match.isHandicap) return "";
-  return `${playerName(playerMap, match.handicapGiverId)} 给 ${playerName(playerMap, match.handicapReceiverId)} 放门`;
-}
-
 function todayName() {
   const date = new Date();
   const pad = (n) => String(n).padStart(2, "0");
@@ -33,6 +25,7 @@ function todayName() {
 
 export default function MatchesPage() {
   const { isAdmin } = useAuth();
+  const t = useT();
   const importInputRef = useRef(null);
   const [matches, setMatches] = useState([]);
   const [players, setPlayers] = useState([]);
@@ -42,6 +35,15 @@ export default function MatchesPage() {
   const [dataMessage, setDataMessage] = useState("");
   const [dataBusy, setDataBusy] = useState(false);
   const [visibleCount, setVisibleCount] = useState(MATCH_PAGE_SIZE);
+
+  const tagLabel = useCallback((tag) => (tag === "live" ? t("直播", "Live") : t("练习赛", "Practice")), [t]);
+  const handicapDetail = useCallback((match, playerMap) => {
+    if (!match.isHandicap) return "";
+    return t(
+      `${playerName(playerMap, match.handicapGiverId)} 给 ${playerName(playerMap, match.handicapReceiverId)} 放门`,
+      `${playerName(playerMap, match.handicapGiverId)} gives handicap to ${playerName(playerMap, match.handicapReceiverId)}`,
+    );
+  }, [t]);
 
   const load = useCallback(async (force = false) => {
     setLoading(true);
@@ -91,7 +93,10 @@ export default function MatchesPage() {
     try {
       const payload = await apiRequest("/data/export");
       downloadJson(todayName(), payload);
-      setDataMessage(`已导出 ${payload.players.length} 名球员、${payload.matches.length} 场正式比赛。`);
+      setDataMessage(t(
+        `已导出 ${payload.players.length} 名球员、${payload.matches.length} 场正式比赛。`,
+        `Exported ${payload.players.length} players and ${payload.matches.length} official matches.`,
+      ));
     } catch (err) {
       setError(err?.message ?? String(err));
     } finally {
@@ -112,7 +117,10 @@ export default function MatchesPage() {
         method: "POST",
         body: jsonBody(parsed),
       });
-      setDataMessage(`导入完成：球员 ${result.importedPlayers}，比赛 ${result.importedMatches}，跳过 ${result.skippedMatches.length}。`);
+      setDataMessage(t(
+        `导入完成：球员 ${result.importedPlayers}，比赛 ${result.importedMatches}，跳过 ${result.skippedMatches.length}。`,
+        `Import done: ${result.importedPlayers} players, ${result.importedMatches} matches, ${result.skippedMatches.length} skipped.`,
+      ));
       invalidatePoolDataCache();
       await load(true);
     } catch (err) {
@@ -125,20 +133,20 @@ export default function MatchesPage() {
 
   return (
     <div className="space">
-      <h1 className="h1">比赛数据</h1>
+      <h1 className="h1">{t("比赛数据", "Matches")}</h1>
 
       <div className="card">
         <div className="rowBetween matchesToolbar" style={{ marginBottom: 12 }}>
           <div className="row matchesFilterRow" style={{ gap: 10, alignItems: "center" }}>
-            <div className="badge">正式比赛数：{matches.length}</div>
+            <div className="badge">{t(`正式比赛数：${matches.length}`, `Official matches: ${matches.length}`)}</div>
             <button className={tagFilter === "all" ? "btn btnBrand" : "btn"} type="button" onClick={() => setTagFilter("all")}>
-              全部
+              {t("全部", "All")}
             </button>
             <button className={tagFilter === "practice" ? "btn btnBrand" : "btn"} type="button" onClick={() => setTagFilter("practice")}>
-              练习赛
+              {t("练习赛", "Practice")}
             </button>
             <button className={tagFilter === "live" ? "btn btnBrand" : "btn"} type="button" onClick={() => setTagFilter("live")}>
-              直播
+              {t("直播", "Live")}
             </button>
           </div>
 
@@ -146,10 +154,10 @@ export default function MatchesPage() {
             {isAdmin && (
               <>
                 <button className="btn matchesDataButton" type="button" onClick={exportJson} disabled={dataBusy}>
-                  导出 JSON
+                  {t("导出 JSON", "Export JSON")}
                 </button>
                 <button className="btn matchesDataButton" type="button" disabled={dataBusy} onClick={() => importInputRef.current?.click()}>
-                  导入 JSON
+                  {t("导入 JSON", "Import JSON")}
                 </button>
                 <input
                   ref={importInputRef}
@@ -160,8 +168,8 @@ export default function MatchesPage() {
                 />
               </>
             )}
-            <Link className="btn btnBrand matchesSubmitButton" to="/new">上报比赛</Link>
-            <button className="btn matchesRefreshButton" onClick={() => load(true)} type="button">刷新</button>
+            <Link className="btn btnBrand matchesSubmitButton" to="/new">{t("上报比赛", "Submit Match")}</Link>
+            <button className="btn matchesRefreshButton" onClick={() => load(true)} type="button">{t("刷新", "Refresh")}</button>
           </div>
         </div>
 
@@ -169,29 +177,29 @@ export default function MatchesPage() {
         {error && <div className="errorBox" style={{ marginBottom: 12 }}>{error}</div>}
 
         {loading ? (
-          <div className="sub">加载中...</div>
+          <div className="sub">{t("加载中...", "Loading...")}</div>
         ) : (
           <div className="tableWrap">
             <table className="matchesTable">
               <thead>
                 <tr>
-                  <th>标签</th>
-                  <th>比赛名称</th>
-                  <th>时间</th>
-                  <th>赛制</th>
-                  <th>左侧</th>
-                  <th>比分</th>
-                  <th>右侧</th>
-                  <th>胜者</th>
-                  <th>放门</th>
-                  {isAdmin && <th>操作</th>}
+                  <th>{t("标签", "Tag")}</th>
+                  <th>{t("比赛名称", "Match Name")}</th>
+                  <th>{t("时间", "Time")}</th>
+                  <th>{t("赛制", "Format")}</th>
+                  <th>{t("左侧", "Left")}</th>
+                  <th>{t("比分", "Score")}</th>
+                  <th>{t("右侧", "Right")}</th>
+                  <th>{t("胜者", "Winner")}</th>
+                  <th>{t("放门", "Handicap")}</th>
+                  {isAdmin && <th>{t("操作", "Action")}</th>}
                 </tr>
               </thead>
               <tbody>
                 {matches.length === 0 ? (
                   <tr>
                     <td colSpan={isAdmin ? "10" : "9"} style={{ color: "var(--muted)" }}>
-                      暂无正式比赛。
+                      {t("暂无正式比赛。", "No official matches yet.")}
                     </td>
                   </tr>
                 ) : (
@@ -200,21 +208,21 @@ export default function MatchesPage() {
                       <td style={{ fontWeight: 900 }}>{tagLabel(match.tag)}</td>
                       <td style={{ fontWeight: 900 }}>{match.matchName}</td>
                       <td>{fmtDate(match.dateISO)}</td>
-                      <td>抢 {match.raceTo}</td>
+                      <td>{t(`抢 ${match.raceTo}`, `Race to ${match.raceTo}`)}</td>
                       <td>{playerName(playerMap, match.leftPlayerId)}</td>
                       <td>{match.leftScore} : {match.rightScore}</td>
                       <td>{playerName(playerMap, match.rightPlayerId)}</td>
                       <td>{playerName(playerMap, match.winnerId)}</td>
                       <td className="matchHandicapCell">
                         <span className="matchHandicapValue">
-                          <span className="matchHandicapStatus">{match.isHandicap ? "是" : "否"}</span>
+                          <span className="matchHandicapStatus">{match.isHandicap ? t("是", "Yes") : t("否", "No")}</span>
                           {match.isHandicap && <span className="matchHandicapDetail">{handicapDetail(match, playerMap)}</span>}
                         </span>
                       </td>
                       {isAdmin && (
                         <td>
-                          <ConfirmButton confirmText="确定删除这场正式比赛吗？" onConfirm={() => onDelete(match.id)}>
-                            删除
+                          <ConfirmButton confirmText={t("确定删除这场正式比赛吗？", "Delete this official match?")} onConfirm={() => onDelete(match.id)}>
+                            {t("删除", "Delete")}
                           </ConfirmButton>
                         </td>
                       )}
@@ -228,7 +236,7 @@ export default function MatchesPage() {
         {!loading && matches.length > visibleMatches.length && (
           <div className="row" style={{ justifyContent: "center", marginTop: 12 }}>
             <button className="btn" type="button" onClick={() => setVisibleCount((count) => count + MATCH_PAGE_SIZE)}>
-              Load more ({visibleMatches.length} / {matches.length})
+              {t(`加载更多 (${visibleMatches.length} / ${matches.length})`, `Load more (${visibleMatches.length} / ${matches.length})`)}
             </button>
           </div>
         )}
