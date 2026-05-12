@@ -8,7 +8,15 @@
       "PowerShell(py *)",
       "Bash(npm init *)",
       "Bash(npm install *)",
-      "Bash(node build.mjs)"
+      "Bash(node build.mjs)",
+      "Bash(mkdir -p \"/tmp/pptx-review\")",
+      "Read(//tmp/**)",
+      "Bash(unzip -o \"/d/OneDrive/Desktop/poolScoreTracker.pptx\" -d .)",
+      "Bash(export LC_ALL=C.UTF-8)",
+      "Bash(node *)",
+      "Bash(unzip -o \"/d/OneDrive/Desktop/poolScoreTracker.pptx\" -d \"/d/OneDrive/Desktop/final-project-ppt/review/\")",
+      "Read(//c/Program Files/LibreOffice/program/**)",
+      "Read(//c/Program Files \\(x86\\)/LibreOffice/program/**)"
     ]
   }
 }
