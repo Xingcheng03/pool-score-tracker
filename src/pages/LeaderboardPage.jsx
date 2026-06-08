@@ -95,8 +95,17 @@ export default function LeaderboardPage() {
     }
   }
 
-  const topThree = rows.slice(0, Math.min(3, rows.length));
-  const tableRows = rows.slice(topThree.length);
+  // 折算场次低于此值的球员不计入排名，统一排到榜尾、名次显示横杠
+  const RANK_MIN_MATCHES = 5;
+  const rankedRows = rows.filter((r) => r.effMatches >= RANK_MIN_MATCHES);
+  const unrankedRows = rows.filter((r) => r.effMatches < RANK_MIN_MATCHES);
+
+  const topThree = rankedRows.slice(0, Math.min(3, rankedRows.length));
+  // 表格行：上榜球员（带名次）在前，未上榜球员（名次为 null）排在最后
+  const tableRows = [
+    ...rankedRows.slice(topThree.length).map((row, i) => ({ row, rank: topThree.length + i + 1 })),
+    ...unrankedRows.map((row) => ({ row, rank: null })),
+  ];
   const seasonQuery = seasonId === "all" ? "" : `?season=${seasonId}`;
 
   return (
@@ -203,9 +212,9 @@ export default function LeaderboardPage() {
                 {tableRows.length === 0 ? (
                   <tr><td colSpan={9} style={{ color: "var(--muted)" }}>{t("暂无符合条件的数据。", "No matching data.")}</td></tr>
                 ) : (
-                  tableRows.map((row, idx) => (
-                    <tr key={row.id}>
-                      <td>{topThree.length + idx + 1}</td>
+                  tableRows.map(({ row, rank }) => (
+                    <tr key={row.id} className={rank == null ? "leaderboardUnrankedRow" : undefined}>
+                      <td style={rank == null ? { color: "var(--muted)" } : undefined}>{rank == null ? "—" : rank}</td>
                       <td style={{ fontWeight: 700 }}><Link to={`/players/${row.id}${seasonQuery}`}>{renderPlayerName(row.name)}</Link></td>
                       <td>{Math.round(row.rating)}</td>
                       <td style={tierStyle(row.tier)}>{translateTier(row.tier)}</td>

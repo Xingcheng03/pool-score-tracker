@@ -593,6 +593,11 @@ select:focus {
   text-align: center;
 }
 
+/* 未上榜球员（赛季内折算场次不足）整行淡化，与正式名次区分 */
+.leaderboardUnrankedRow td {
+  opacity: 0.55;
+}
+
 .leaderboardWinLoseCard {
   border: 1px solid #cfd8e6;
   background: #fff;
