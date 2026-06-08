@@ -106,6 +106,8 @@ export default function LeaderboardPage() {
     ...rankedRows.slice(topThree.length).map((row, i) => ({ row, rank: topThree.length + i + 1 })),
     ...unrankedRows.map((row) => ({ row, rank: null })),
   ];
+  // 表格里第一个未上榜球员的位置，用于在其上方插入一行说明
+  const firstUnrankedIndex = tableRows.findIndex((e) => e.rank == null);
   const seasonQuery = seasonId === "all" ? "" : `?season=${seasonId}`;
 
   return (
@@ -212,8 +214,19 @@ export default function LeaderboardPage() {
                 {tableRows.length === 0 ? (
                   <tr><td colSpan={9} style={{ color: "var(--muted)" }}>{t("暂无符合条件的数据。", "No matching data.")}</td></tr>
                 ) : (
-                  tableRows.map(({ row, rank }) => (
-                    <tr key={row.id} className={rank == null ? "leaderboardUnrankedRow" : undefined}>
+                  tableRows.map(({ row, rank }, idx) => (
+                    <React.Fragment key={row.id}>
+                    {idx === firstUnrankedIndex && (
+                      <tr className="leaderboardUnrankedDivider">
+                        <td colSpan={9}>
+                          {t(
+                            "以下球员因比赛场次不足 5 场或暂无比赛记录，暂不计入排名",
+                            "Players below are not ranked: fewer than 5 matches or no match records",
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                    <tr className={rank == null ? "leaderboardUnrankedRow" : undefined}>
                       <td style={rank == null ? { color: "var(--muted)" } : undefined}>{rank == null ? "—" : rank}</td>
                       <td style={{ fontWeight: 700 }}><Link to={`/players/${row.id}${seasonQuery}`}>{renderPlayerName(row.name)}</Link></td>
                       <td>{Math.round(row.rating)}</td>
@@ -226,6 +239,7 @@ export default function LeaderboardPage() {
                       <td>{pct(row.liveRackWinRate)}</td>
                       <td>{pct(row.pracRackWinRate)}</td>
                     </tr>
+                    </React.Fragment>
                   ))
                 )}
               </tbody>
