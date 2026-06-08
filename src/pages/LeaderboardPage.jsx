@@ -201,10 +201,12 @@ export default function LeaderboardPage() {
                     {idx === firstUnrankedIndex && (
                       <tr className="leaderboardUnrankedDivider">
                         <td colSpan={9}>
-                          {t(
-                            "以下球员因比赛场次不足 5 场或暂无比赛记录，暂不计入排名",
-                            "Players below are not ranked: fewer than 5 matches or no match records",
-                          )}
+                          <span className="leaderboardUnrankedDividerText">
+                            {t(
+                              "以下球员场次不足 5 场或暂无记录，未计入排名",
+                              "Not ranked · under 5 matches or no records",
+                            )}
+                          </span>
                         </td>
                       </tr>
                     )}

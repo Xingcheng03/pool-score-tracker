@@ -16,7 +16,10 @@
       "Bash(node *)",
       "Bash(unzip -o \"/d/OneDrive/Desktop/poolScoreTracker.pptx\" -d \"/d/OneDrive/Desktop/final-project-ppt/review/\")",
       "Read(//c/Program Files/LibreOffice/program/**)",
-      "Read(//c/Program Files \\(x86\\)/LibreOffice/program/**)"
+      "Read(//c/Program Files \\(x86\\)/LibreOffice/program/**)",
+      "Skill(impeccable)",
+      "Bash(npx eslint *)",
+      "Bash(echo \"lint done \\(exit $?\\)\")"
     ]
   }
 }
