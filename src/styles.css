@@ -3191,6 +3191,20 @@ tbody tr:hover td {
     display: none;
   }
 
+  /* 说明分隔行：手机端不走 grid，整行铺满居中显示 */
+  .leaderboardMainTable tr.leaderboardUnrankedDivider {
+    display: block;
+    padding: 0;
+  }
+
+  .leaderboardMainTable tr.leaderboardUnrankedDivider td {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    text-align: center;
+    white-space: normal;
+  }
+
   .adminReportsTable td:nth-child(11) .row {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
