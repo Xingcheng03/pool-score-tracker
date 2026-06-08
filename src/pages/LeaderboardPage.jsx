@@ -38,8 +38,7 @@ export default function LeaderboardPage() {
   const translateTier = useTranslateTier();
   const [q, setQ] = useState("");
   const [mode, setMode] = useState("all");
-  // null = 默认赛季尚未确定（挂载后解析为最新赛季）
-  const [seasonId, setSeasonId] = useState(null);
+  const [seasonId, setSeasonId] = useState("all");
   const [minMatches, setMinMatches] = useState(0);
   const [sortKey, setSortKey] = useState("rating");
   const [sortDir, setSortDir] = useState("desc");
@@ -51,7 +50,6 @@ export default function LeaderboardPage() {
   const debouncedQ = useDebouncedValue(q, 300);
 
   const load = useCallback(async (force = false) => {
-    if (seasonId == null) return; // 等默认赛季解析完成后再加载
     setLoading(true);
     setError("");
     try {
@@ -66,22 +64,6 @@ export default function LeaderboardPage() {
       setLoading(false);
     }
   }, [mode, seasonId, debouncedQ, minMatches, sortKey, sortDir]);
-
-  // 挂载时解析默认赛季：取最新赛季；无赛季时回退到全部
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await cachedApiRequest("/leaderboard/seasons");
-        const list = data?.seasons ?? [];
-        const latest = list.length ? list[list.length - 1].id : "all";
-        if (!cancelled) setSeasonId(latest);
-      } catch {
-        if (!cancelled) setSeasonId("all");
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
 
   useEffect(() => {
     load();
@@ -134,7 +116,7 @@ export default function LeaderboardPage() {
             <option value="live">{t("直播", "Live")}</option>
           </select>
 
-          <select className="input" value={seasonId ?? "all"} onChange={(e) => setSeasonId(e.target.value)}>
+          <select className="input" value={seasonId} onChange={(e) => setSeasonId(e.target.value)}>
             <option value="all">{t("全部赛季", "All seasons")}</option>
             {seasons.map((season) => (
               <option key={season.id} value={season.id}>{season.label}</option>
