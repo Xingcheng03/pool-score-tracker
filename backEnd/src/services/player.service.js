@@ -71,6 +71,18 @@ export async function updatePlayer(id, input) {
   return serializePlayer(player, { includeAccount: true });
 }
 
+export async function setPlayerVisibility(id, input) {
+  const hidden = Boolean(input?.hidden);
+  const player = await prisma.player.update({
+    where: { id },
+    data: { hidden },
+    include: { user: true },
+  });
+
+  invalidateStatsCache();
+  return serializePlayer(player, { includeAccount: true });
+}
+
 export async function deletePlayer(id) {
   const [matches, reports] = await Promise.all([
     prisma.match.count({

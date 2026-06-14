@@ -57,7 +57,7 @@ export async function getStatsData() {
   ]);
 
   const value = {
-    players: players.map((player) => ({ id: player.id, name: player.name })),
+    players: players.map((player) => ({ id: player.id, name: player.name, hidden: player.hidden ?? false })),
     matches: dbMatches.map(serializeMatch),
   };
 

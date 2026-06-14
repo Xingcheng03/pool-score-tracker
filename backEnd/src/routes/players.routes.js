@@ -8,6 +8,7 @@ import {
   getPlayer,
   listPlayers,
   setPlayerAccount,
+  setPlayerVisibility,
   updatePlayer,
 } from "../services/player.service.js";
 
@@ -29,6 +30,10 @@ playersRouter.get("/:id", asyncHandler(async (req, res) => {
 
 playersRouter.patch("/:id", requireRole("ADMIN"), asyncHandler(async (req, res) => {
   res.json({ player: await updatePlayer(req.params.id, req.body) });
+}));
+
+playersRouter.patch("/:id/visibility", requireRole("ADMIN"), asyncHandler(async (req, res) => {
+  res.json({ player: await setPlayerVisibility(req.params.id, req.body) });
 }));
 
 playersRouter.delete("/:id", requireRole("ADMIN"), asyncHandler(async (req, res) => {

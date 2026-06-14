@@ -31,6 +31,7 @@ export function serializePlayer(player, opts = {}) {
   const result = {
     id: player.id,
     name: player.name,
+    hidden: player.hidden ?? false,
     createdAt: player.createdAt?.toISOString?.() ?? player.createdAt,
     updatedAt: player.updatedAt?.toISOString?.() ?? player.updatedAt,
   };

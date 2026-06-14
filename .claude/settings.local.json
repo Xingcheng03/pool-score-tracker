@@ -19,7 +19,12 @@
       "Read(//c/Program Files \\(x86\\)/LibreOffice/program/**)",
       "Skill(impeccable)",
       "Bash(npx eslint *)",
-      "Bash(echo \"lint done \\(exit $?\\)\")"
+      "Bash(echo \"lint done \\(exit $?\\)\")",
+      "Bash(node_modules/.bin/prisma migrate *)",
+      "Bash(node_modules/.bin/prisma db *)",
+      "Bash(node_modules/.bin/prisma generate *)",
+      "PowerShell(Get-Process *)",
+      "PowerShell(Stop-Process *)"
     ]
   }
 }

@@ -208,6 +208,7 @@ export function buildFargoLiteLeaderboardFromData(players, matchesInput, opts = 
     return {
       id: p.id,
       name: p.name ?? "Unknown",
+      hidden: p.hidden ?? false,
       rating: raw,
       ratingRounded: rounded,
       tier: tierFromRating(rounded),
@@ -223,6 +224,7 @@ export function buildFargoLiteLeaderboardFromData(players, matchesInput, opts = 
   });
 
   rows = rows
+    .filter((x) => !x.hidden)
     .filter((x) => (q ? x.name.toLowerCase().includes(q) : true))
     .filter((x) => x.effMatches >= minMatches);
 
@@ -631,6 +633,7 @@ export function buildWinLoseRowsFromData(players, matches, opts = {}) {
       {
         id: p.id,
         name: p.name ?? "Unknown",
+        hidden: p.hidden ?? false,
         points: BASE_POINTS,
         wins: 0,
         losses: 0,
@@ -697,10 +700,12 @@ export function buildWinLoseRowsFromData(players, matches, opts = {}) {
     });
   }
 
-  let rows = [...state.values()].map((r) => ({
-    ...r,
-    tier: tierFromPoints(r.points),
-  }));
+  let rows = [...state.values()]
+    .filter((r) => !r.hidden)
+    .map((r) => ({
+      ...r,
+      tier: tierFromPoints(r.points),
+    }));
 
   if (q) {
     rows = rows.filter((r) => r.name.toLowerCase().includes(q));

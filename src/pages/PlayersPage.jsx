@@ -46,6 +46,12 @@ export default function PlayersPage() {
     await load(true);
   }
 
+  async function setVisibility(id, hidden) {
+    await apiRequest(`/players/${id}/visibility`, { method: "PATCH", body: jsonBody({ hidden }) });
+    invalidatePoolDataCache();
+    await load(true);
+  }
+
   return (
     <div>
       <h1 className="h1">{t("球员", "Players")}</h1>
@@ -82,17 +88,18 @@ export default function PlayersPage() {
                   <th>{t("查看", "View")}</th>
                   {isAdmin && <th>{t("账号", "Account")}</th>}
                   {isAdmin && <th>{t("改名", "Rename")}</th>}
+                  {isAdmin && <th>{t("榜单显示", "Leaderboard")}</th>}
                   {isAdmin && <th>{t("删除", "Delete")}</th>}
                 </tr>
               </thead>
               <tbody>
                 {players.length === 0 ? (
                   <tr>
-                    <td colSpan={isAdmin ? "5" : "2"} style={{ color: "var(--muted)" }}>{t("暂无球员。", "No players yet.")}</td>
+                    <td colSpan={isAdmin ? "6" : "2"} style={{ color: "var(--muted)" }}>{t("暂无球员。", "No players yet.")}</td>
                   </tr>
                 ) : (
                   players.map((player) => (
-                    <PlayerRow key={player.id} player={player} isAdmin={isAdmin} onReload={load} onDelete={deletePlayer} />
+                    <PlayerRow key={player.id} player={player} isAdmin={isAdmin} onReload={load} onDelete={deletePlayer} onSetVisibility={setVisibility} />
                   ))
                 )}
               </tbody>
@@ -104,7 +111,7 @@ export default function PlayersPage() {
   );
 }
 
-function PlayerRow({ player, isAdmin, onReload, onDelete }) {
+function PlayerRow({ player, isAdmin, onReload, onDelete, onSetVisibility }) {
   const t = useT();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(player.name);
@@ -143,6 +150,9 @@ function PlayerRow({ player, isAdmin, onReload, onDelete }) {
     <tr>
       <td className="playerNameCell" style={{ fontWeight: 900 }}>
         <Link to={`/players/${player.id}`}>{player.name}</Link>
+        {player.hidden && (
+          <span className="badge" style={{ marginLeft: 8, color: "var(--muted)" }}>{t("已禁用", "Disabled")}</span>
+        )}
       </td>
       <td className="playerViewCell">
         <Link className="btn" to={`/players/${player.id}`}>{t("进入详情", "View Details")}</Link>
@@ -179,6 +189,23 @@ function PlayerRow({ player, isAdmin, onReload, onDelete }) {
               <button className="btn btnBrand" type="button" onClick={saveName}>{t("保存", "Save")}</button>
               <button className="btn" type="button" onClick={() => { setName(player.name); setEditing(false); }}>{t("取消", "Cancel")}</button>
             </div>
+          )}
+        </td>
+      )}
+      {isAdmin && (
+        <td className="playerVisibilityCell">
+          {player.hidden ? (
+            <button className="btn btnBrand" type="button" onClick={() => onSetVisibility(player.id, false)}>
+              {t("恢复", "Restore")}
+            </button>
+          ) : (
+            <ConfirmButton
+              className="btn"
+              confirmText={t(`确定禁用球员 ${player.name} 吗？禁用后他不在街灯榜和胜负积分榜显示，但比赛记录保留。`, `Disable player ${player.name}? They will be hidden from both leaderboards, but match records are kept.`)}
+              onConfirm={() => onSetVisibility(player.id, true)}
+            >
+              {t("禁用", "Disable")}
+            </ConfirmButton>
           )}
         </td>
       )}

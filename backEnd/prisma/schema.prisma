@@ -51,6 +51,7 @@ model User {
 model Player {
   id        String   @id @default(cuid())
   name      String
+  hidden    Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
