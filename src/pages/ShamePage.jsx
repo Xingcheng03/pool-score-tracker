@@ -43,6 +43,7 @@ export default function ShamePage() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
+  const [openMenuId, setOpenMenuId] = useState(null);
 
   const load = useCallback(async (force = false) => {
     setLoading(true);
@@ -69,6 +70,26 @@ export default function ShamePage() {
     (id) => players.find((p) => p.id === id)?.name ?? t("未知球员", "Unknown"),
     [players, t],
   );
+
+  // 每条记录是该 loser 在整个列表里第几次被定（按时间升序）。第 1 次不显示角标。
+  const pinOrdinalById = useMemo(() => {
+    const sorted = [...data.records].sort((a, b) => {
+      const ta = new Date(a.dateISO).getTime();
+      const tb = new Date(b.dateISO).getTime();
+      if (ta !== tb) return ta - tb;
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    });
+    const counter = new Map();
+    const map = new Map();
+    for (const r of sorted) {
+      const lid = r.loser?.id;
+      if (!lid) continue;
+      const n = (counter.get(lid) ?? 0) + 1;
+      counter.set(lid, n);
+      map.set(r.id, n);
+    }
+    return map;
+  }, [data.records]);
 
   const isEditing = Boolean(form.id);
 
@@ -305,43 +326,68 @@ export default function ShamePage() {
           {data.records.length === 0 ? (
             <div className="card" style={{ color: "var(--muted)" }}>{t("还没有任何记录。", "No records yet.")}</div>
           ) : (
-            data.records.map((record) => (
-              <div key={record.id} className="card" style={{ marginBottom: 10 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
-                  <div style={{ minWidth: 0 }}>
+            data.records.map((record) => {
+              const ordinal = pinOrdinalById.get(record.id) ?? 1;
+              const menuOpen = openMenuId === record.id;
+              return (
+                <div key={record.id} className="shameCard">
+                  <div className="shameCardLeft">
                     <div className="smallMuted">{fmtDay(record.dateISO)}</div>
-                    <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                      <span style={{ fontWeight: 1000, fontSize: 18, color: "var(--danger)" }}>
-                        {record.loser?.name ?? t("未知球员", "Unknown")}
-                      </span>
-                      <span
-                        className="badge"
-                        style={{ borderColor: "rgba(225,29,72,.45)", color: "var(--danger)", fontWeight: 900 }}
-                      >
-                        {t(`被定 ${record.pins} 局 👿`, `pinned ${record.pins} 👿`)}
-                      </span>
+                    <div className="shameCardLoserRow">
+                      <span className="shameCardLoser">{record.loser?.name ?? t("未知球员", "Unknown")}</span>
+                      {ordinal > 1 && (
+                        <span className="badge shameOrdinalBadge">{t(`第 ${ordinal} 次被定`, `#${ordinal} pinned`)}</span>
+                      )}
                     </div>
+                    {record.participants.length > 0 && (
+                      <div className="shameCardParticipants">
+                        <span className="smallMuted">{t("同场球员：", "On the table: ")}</span>
+                        {record.participants.map((p) => (
+                          <span key={p.id} className="badge">{p.name}</span>
+                        ))}
+                      </div>
+                    )}
                   </div>
+
+                  <div className="shameCardPins">
+                    <span className="shameCardPinsLabel">{t("被定", "Pinned")}</span>
+                    <span className="shameCardPinsValue">
+                      {record.pins}<span className="shameCardPinsUnit">{t("局", "")}</span>
+                    </span>
+                  </div>
+
                   {isAdmin && (
-                    <div className="row" style={{ gap: 8 }}>
-                      <button className="btn" type="button" onClick={() => startEdit(record)}>{t("编辑", "Edit")}</button>
-                      <button className="btn btnDanger" type="button" onClick={() => onDelete(record)}>{t("删除", "Delete")}</button>
+                    <div className="shameCardAdmin">
+                      <div className="shameCardAdminInline">
+                        <button className="btn" type="button" onClick={() => startEdit(record)}>{t("编辑", "Edit")}</button>
+                        <button className="btn btnDanger" type="button" onClick={() => onDelete(record)}>{t("删除", "Delete")}</button>
+                      </div>
+                      <button
+                        className="shameCardKebab"
+                        type="button"
+                        aria-label={t("更多操作", "More actions")}
+                        onClick={() => setOpenMenuId(menuOpen ? null : record.id)}
+                      >
+                        ⋯
+                      </button>
+                      {menuOpen && (
+                        <>
+                          <div className="shameMenuOverlay" onClick={() => setOpenMenuId(null)} />
+                          <div className="shameMenu">
+                            <button type="button" className="shameMenuItem" onClick={() => { setOpenMenuId(null); startEdit(record); }}>
+                              {t("编辑", "Edit")}
+                            </button>
+                            <button type="button" className="shameMenuItem shameMenuItemDanger" onClick={() => { setOpenMenuId(null); onDelete(record); }}>
+                              {t("删除", "Delete")}
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
-
-                {record.participants.length > 0 && (
-                  <div style={{ marginTop: 10 }}>
-                    <span className="smallMuted">{t("同场球员：", "On the table: ")}</span>
-                    <span className="row" style={{ display: "inline-flex", flexWrap: "wrap", gap: 6, marginLeft: 4, verticalAlign: "middle" }}>
-                      {record.participants.map((p) => (
-                        <span key={p.id} className="badge">{p.name}</span>
-                      ))}
-                    </span>
-                  </div>
-                )}
-              </div>
-            ))
+              );
+            })
           )}
         </>
       )}

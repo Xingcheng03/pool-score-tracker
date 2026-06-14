@@ -465,6 +465,397 @@ select:focus {
   background: var(--soft);
 }
 
+/* 退役/回归 控件：桌面行内，手机占满整行 */
+.playerDetailRetireControls {
+  display: flex;
+  gap: 8px;
+}
+
+/* 退役高光挑选器 */
+.retireHighlightPicker {
+  max-height: 300px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px;
+  background: var(--soft);
+}
+
+.retireHighlightRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #ffffff;
+  cursor: pointer;
+  font: inherit;
+}
+
+.retireHighlightRow:hover:not(:disabled) {
+  border-color: var(--primary);
+}
+
+.retireHighlightRow.isSelected {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.retireHighlightRow:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.retireHighlightCheck {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  color: var(--primary);
+  font-weight: 900;
+}
+
+.retireHighlightRow.isSelected .retireHighlightCheck {
+  border-color: var(--primary);
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.retireHighlightMain {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.retireHighlightName {
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.retireHighlightMeta {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* 耻辱明细卡片 */
+.shameCard {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #ffffff;
+  box-shadow: var(--shadowSoft);
+  padding: 16px;
+  margin-bottom: 10px;
+}
+
+.shameCardLeft {
+  flex: 1;
+  min-width: 0;
+}
+
+.shameCardLoserRow {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.shameCardLoser {
+  font-weight: 1000;
+  font-size: 20px;
+  color: var(--danger);
+}
+
+.shameOrdinalBadge {
+  border-color: rgba(225, 29, 72, 0.4);
+  color: var(--danger);
+  font-weight: 800;
+}
+
+.shameCardParticipants {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.shameCardPins {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--danger);
+  min-width: 76px;
+  padding: 0 6px;
+}
+
+.shameCardPinsLabel {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.shameCardPinsValue {
+  font-weight: 1000;
+  font-size: 36px;
+  line-height: 1;
+}
+
+.shameCardPinsUnit {
+  font-size: 14px;
+  margin-left: 2px;
+}
+
+.shameCardAdmin {
+  flex: 0 0 auto;
+  position: relative;
+}
+
+.shameCardAdminInline {
+  display: flex;
+  gap: 8px;
+}
+
+.shameCardKebab {
+  display: none;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 2px 6px;
+  color: var(--muted);
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.shameCardKebab:hover {
+  background: var(--soft);
+}
+
+.shameMenuOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+}
+
+.shameMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  min-width: 120px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadowSoft);
+  overflow: hidden;
+}
+
+.shameMenuItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 14px;
+  background: #ffffff;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.shameMenuItem:hover {
+  background: var(--soft);
+}
+
+.shameMenuItemDanger {
+  color: var(--danger);
+}
+
+@media (max-width: 640px) {
+  .shameCard {
+    align-items: flex-start;
+  }
+
+  .shameCardAdminInline {
+    display: none;
+  }
+
+  .shameCardKebab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .shameCardAdmin {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+  }
+
+  .shameCardPins {
+    margin-top: 22px;
+    min-width: 60px;
+  }
+}
+
+/* 历史球员（退役）卡片 */
+.historyGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.historyCard {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #ffffff;
+  box-shadow: var(--shadowSoft);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+.historyCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.historyCardChevron {
+  display: none;
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.historyCardName {
+  font-size: 22px;
+  font-weight: 1000;
+  line-height: 1.2;
+}
+
+.historyCardNote {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--primary);
+  margin-left: 8px;
+}
+
+.historyCardSub {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+.historyCardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.historyStatList {
+  display: flex;
+  flex-direction: column;
+}
+
+.historyStatRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  padding: 5px 0;
+  border-bottom: 1px dashed var(--line);
+}
+
+.historyStatRow:last-child {
+  border-bottom: 0;
+}
+
+.historyStatLabel {
+  color: var(--muted);
+}
+
+.historyStatValue {
+  font-weight: 800;
+  text-align: right;
+}
+
+.historyStatValue.isStrong {
+  color: var(--primary);
+}
+
+.historyHighlightsHead {
+  font-weight: 900;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.historyHighlightItem {
+  border-top: 1px dashed var(--line);
+  padding-top: 8px;
+  margin-top: 8px;
+}
+
+.historyHighlightItem:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+  margin-top: 0;
+}
+
+.historyHighlightName {
+  font-weight: 800;
+}
+
+.historyHighlightMeta {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+@media (max-width: 640px) {
+  .historyGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .historyCardChevron {
+    display: inline;
+  }
+
+  .historyCardBody.isCollapsed {
+    display: none;
+  }
+}
+
 .leaderboardSplit {
   margin-top: 14px;
   display: grid;
@@ -3597,6 +3988,16 @@ tbody tr:hover td {
 
   .playerDetailControls {
     display: contents;
+  }
+
+  .playerDetailRetireControls {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .playerDetailRetireControls .btn {
+    flex: 1;
+    min-width: 0;
   }
 
   .playerDetailSeasonSelect {

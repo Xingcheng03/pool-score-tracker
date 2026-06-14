@@ -8,6 +8,7 @@ import {
   getPlayer,
   listPlayers,
   setPlayerAccount,
+  setPlayerRetirement,
   setPlayerVisibility,
   updatePlayer,
 } from "../services/player.service.js";
@@ -34,6 +35,10 @@ playersRouter.patch("/:id", requireRole("ADMIN"), asyncHandler(async (req, res) 
 
 playersRouter.patch("/:id/visibility", requireRole("ADMIN"), asyncHandler(async (req, res) => {
   res.json({ player: await setPlayerVisibility(req.params.id, req.body) });
+}));
+
+playersRouter.patch("/:id/retirement", requireRole("ADMIN"), asyncHandler(async (req, res) => {
+  res.json({ player: await setPlayerRetirement(req.params.id, req.body) });
 }));
 
 playersRouter.delete("/:id", requireRole("ADMIN"), asyncHandler(async (req, res) => {

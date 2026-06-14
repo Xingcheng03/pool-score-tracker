@@ -32,9 +32,16 @@ export function serializePlayer(player, opts = {}) {
     id: player.id,
     name: player.name,
     hidden: player.hidden ?? false,
+    retired: player.retired ?? false,
+    retirementNote: player.retirementNote ?? null,
+    retiredAt: player.retiredAt?.toISOString?.() ?? player.retiredAt ?? null,
     createdAt: player.createdAt?.toISOString?.() ?? player.createdAt,
     updatedAt: player.updatedAt?.toISOString?.() ?? player.updatedAt,
   };
+
+  if (player.highlightMatches) {
+    result.highlightMatchIds = player.highlightMatches.map((m) => m.id);
+  }
 
   if (opts.includeAccount) {
     result.account = player.user

@@ -50,11 +50,14 @@ model User {
 }
 
 model Player {
-  id        String   @id @default(cuid())
-  name      String
-  hidden    Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String    @id @default(cuid())
+  name           String
+  hidden         Boolean   @default(false)
+  retired        Boolean   @default(false)
+  retirementNote String?
+  retiredAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   user User?
 
@@ -75,6 +78,8 @@ model Player {
 
   shameLosses         ShameRecord[] @relation("ShameLoser")
   shameParticipations ShameRecord[] @relation("ShameParticipants")
+
+  highlightMatches Match[] @relation("PlayerHighlights")
 }
 
 model Match {
@@ -101,6 +106,7 @@ model Match {
   handicapReceiver Player? @relation("HandicapReceiverMatches", fields: [handicapReceiverId], references: [id], onDelete: SetNull)
   sourceReport     MatchReport? @relation("ApprovedMatch")
   aiReportCycles   AiReport[] @relation("AiReportCycleMatch")
+  highlightedBy    Player[] @relation("PlayerHighlights")
 
   @@index([dateISO])
   @@index([tag])

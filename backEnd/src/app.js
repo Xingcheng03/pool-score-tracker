@@ -9,6 +9,7 @@ import { leaderboardRouter } from "./routes/leaderboard.routes.js";
 import { matchesRouter } from "./routes/matches.routes.js";
 import { matchReportsRouter } from "./routes/matchReports.routes.js";
 import { playersRouter } from "./routes/players.routes.js";
+import { retiredRouter } from "./routes/retired.routes.js";
 import { shameRouter } from "./routes/shame.routes.js";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
 
@@ -30,6 +31,7 @@ app.use("/api/matches", matchesRouter);
 app.use("/api/match-reports", matchReportsRouter);
 app.use("/api/leaderboard", leaderboardRouter);
 app.use("/api/shame", shameRouter);
+app.use("/api/retired", retiredRouter);
 app.use("/api/data", dataRouter);
 
 app.use(notFound);

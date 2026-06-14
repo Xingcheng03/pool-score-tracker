@@ -12,6 +12,7 @@ import LoginPage from "./pages/LoginPage.jsx";
 import MatchesPage from "./pages/MatchesPage.jsx";
 import NewMatchPage from "./pages/NewMatchPage.jsx";
 import PlayerDetailPage from "./pages/PlayerDetailPage.jsx";
+import HistoricalPlayersPage from "./pages/HistoricalPlayersPage.jsx";
 import PlayersPage from "./pages/PlayersPage.jsx";
 import ShamePage from "./pages/ShamePage.jsx";
 
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="/new" element={<ProtectedPage><NewMatchPage /></ProtectedPage>} />
           <Route path="/leaderboard" element={<ProtectedPage><LeaderboardPage /></ProtectedPage>} />
           <Route path="/shame" element={<ProtectedPage><ShamePage /></ProtectedPage>} />
+          <Route path="/history" element={<ProtectedPage><HistoricalPlayersPage /></ProtectedPage>} />
           <Route path="/ai-analysis" element={<ProtectedPage><AiAnalysisPage /></ProtectedPage>} />
           <Route path="/account" element={<ProtectedPage><AccountPage /></ProtectedPage>} />
           <Route path="/admin/reports" element={<ProtectedPage adminOnly><AdminReportsPage /></ProtectedPage>} />

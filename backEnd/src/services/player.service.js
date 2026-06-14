@@ -39,7 +39,7 @@ export async function listPlayers(opts = {}) {
 export async function getPlayer(id, opts = {}) {
   const player = await prisma.player.findUnique({
     where: { id },
-    include: { user: true },
+    include: { user: true, highlightMatches: true },
   });
 
   if (!player) throw httpError(404, "Player not found");
@@ -81,6 +81,70 @@ export async function setPlayerVisibility(id, input) {
 
   invalidateStatsCache();
   return serializePlayer(player, { includeAccount: true });
+}
+
+function cleanRetiredAt(value) {
+  if (value == null || value === "") return new Date();
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) throw httpError(400, "Invalid retirement date");
+  return date;
+}
+
+async function cleanHighlightMatchIds(playerId, highlightMatchIds) {
+  const ids = Array.isArray(highlightMatchIds)
+    ? [...new Set(highlightMatchIds.map((x) => String(x ?? "").trim()).filter(Boolean))]
+    : [];
+
+  if (ids.length === 0) return [];
+  if (ids.length > 3) throw httpError(400, "At most 3 highlight matches are allowed");
+
+  const matches = await prisma.match.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, leftPlayerId: true, rightPlayerId: true },
+  });
+
+  if (matches.length !== ids.length) throw httpError(404, "Some highlight matches were not found");
+
+  const notOwn = matches.find((m) => m.leftPlayerId !== playerId && m.rightPlayerId !== playerId);
+  if (notOwn) throw httpError(400, "Highlight matches must belong to this player");
+
+  return ids;
+}
+
+export async function setPlayerRetirement(id, input) {
+  const player = await prisma.player.findUnique({ where: { id } });
+  if (!player) throw httpError(404, "Player not found");
+
+  const retired = Boolean(input?.retired);
+
+  if (!retired) {
+    // 回归：仅翻转状态，保留备注/高光，方便日后再退役时复用
+    const updated = await prisma.player.update({
+      where: { id },
+      data: { retired: false, retiredAt: null },
+      include: { user: true, highlightMatches: true },
+    });
+    invalidateStatsCache();
+    return serializePlayer(updated, { includeAccount: true });
+  }
+
+  const retiredAt = cleanRetiredAt(input?.retiredAt);
+  const note = input?.retirementNote == null ? null : String(input.retirementNote).trim() || null;
+  const highlightIds = await cleanHighlightMatchIds(id, input?.highlightMatchIds);
+
+  const updated = await prisma.player.update({
+    where: { id },
+    data: {
+      retired: true,
+      retiredAt,
+      retirementNote: note,
+      highlightMatches: { set: highlightIds.map((mid) => ({ id: mid })) },
+    },
+    include: { user: true, highlightMatches: true },
+  });
+
+  invalidateStatsCache();
+  return serializePlayer(updated, { includeAccount: true });
 }
 
 export async function deletePlayer(id) {

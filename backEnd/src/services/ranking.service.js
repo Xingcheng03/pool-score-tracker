@@ -209,6 +209,7 @@ export function buildFargoLiteLeaderboardFromData(players, matchesInput, opts = 
       id: p.id,
       name: p.name ?? "Unknown",
       hidden: p.hidden ?? false,
+      retired: p.retired ?? false,
       rating: raw,
       ratingRounded: rounded,
       tier: tierFromRating(rounded),
@@ -224,7 +225,7 @@ export function buildFargoLiteLeaderboardFromData(players, matchesInput, opts = 
   });
 
   rows = rows
-    .filter((x) => !x.hidden)
+    .filter((x) => !x.hidden && !x.retired)
     .filter((x) => (q ? x.name.toLowerCase().includes(q) : true))
     .filter((x) => x.effMatches >= minMatches);
 
@@ -316,6 +317,37 @@ function calcRackStatsForPlayerHalf(playerId, matchesAll, mode) {
     pracRackWinRate,
     trend10,
     confidence,
+  };
+}
+
+// 历史球员卡片用的全量统计：场级胜负 + 局级胜率 + 当前 Rating/段位。
+// 用全体 players（含已退役/禁用）算 rating，保证与街灯榜口径一致、对手不受影响。
+export function calcPlayerCardStats(playerId, players, matches) {
+  const { rating, played } = computeRatingsFargoLiteHalf(players, matches);
+  const matchStats = calcPlayerStats(playerId, { tag: "all", _matches: matches });
+  const rackAll = calcRackStatsForPlayerHalf(playerId, matches, "all");
+  const history = getPlayerFargoRatingHistoryFromData(playerId, players, matches);
+
+  const ratingRaw = rating.get(playerId) ?? 500;
+  const ratingRounded = Math.round(ratingRaw);
+  const peakRatingRounded = Math.round(history.highestRating ?? ratingRaw);
+
+  return {
+    ratingRounded,
+    tier: tierFromRating(ratingRounded),
+    peakRatingRounded,
+    peakTier: tierFromRating(peakRatingRounded),
+    matchCount: matchStats.matches.length,
+    wins: matchStats.wins,
+    losses: matchStats.losses,
+    winRate: matchStats.winRate,
+    played: played.get(playerId) ?? 0,
+    racks: rackAll.racks,
+    rackWinRate: rackAll.rackWinRate,
+    liveRackWinRate: rackAll.liveRackWinRate,
+    pracRackWinRate: rackAll.pracRackWinRate,
+    trend10: rackAll.trend10,
+    confidence: rackAll.confidence,
   };
 }
 
@@ -634,6 +666,7 @@ export function buildWinLoseRowsFromData(players, matches, opts = {}) {
         id: p.id,
         name: p.name ?? "Unknown",
         hidden: p.hidden ?? false,
+        retired: p.retired ?? false,
         points: BASE_POINTS,
         wins: 0,
         losses: 0,
@@ -701,7 +734,7 @@ export function buildWinLoseRowsFromData(players, matches, opts = {}) {
   }
 
   let rows = [...state.values()]
-    .filter((r) => !r.hidden)
+    .filter((r) => !r.hidden && !r.retired)
     .map((r) => ({
       ...r,
       tier: tierFromPoints(r.points),

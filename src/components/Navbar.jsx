@@ -75,6 +75,9 @@ export default function Navbar() {
               <NavLink to="/shame" className={linkClass} onClick={closeMenu}>
                 {t("耻辱柱", "Hall of Shame")}
               </NavLink>
+              <NavLink to="/history" className={linkClass} onClick={closeMenu}>
+                {t("历史球员", "Historical Players")}
+              </NavLink>
               {isAdmin && (
                 <NavLink to="/admin/reports" className={linkClass} onClick={closeMenu}>
                   {t("审核比分", "Review Reports")}

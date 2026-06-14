@@ -2,9 +2,28 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/useAuth.js";
 import AccountSettingsForm from "../components/AccountSettingsForm.jsx";
-import { buildQuery } from "../lib/api.js";
-import { cachedApiRequest } from "../lib/apiCache.js";
+import { apiRequest, buildQuery, jsonBody } from "../lib/api.js";
+import { cachedApiRequest, invalidateApiCache, invalidatePoolDataCache } from "../lib/apiCache.js";
 import { useT } from "../lib/i18n.jsx";
+
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+
+function todayInput() {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function isoToDayInput(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return todayInput();
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function dayInputToISO(dayValue) {
+  return new Date(`${dayValue}T12:00:00`).toISOString();
+}
 
 function formatCount(value) {
   if (!Number.isFinite(value)) return "0";
@@ -352,14 +371,22 @@ function RatingHistory({ history, players }) {
 }
 export default function PlayerDetailPage() {
   const { playerId } = useParams();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const t = useT();
   const [searchParams, setSearchParams] = useSearchParams();
   const [players, setPlayers] = useState([]);
   const [seasons, setSeasons] = useState([]);
   const [data, setData] = useState(null);
+  const [playerDetail, setPlayerDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const [retireOpen, setRetireOpen] = useState(false);
+  const [retireNote, setRetireNote] = useState("");
+  const [retireDate, setRetireDate] = useState(todayInput);
+  const [highlightIds, setHighlightIds] = useState([]);
+  const [retireSaving, setRetireSaving] = useState(false);
+  const [retireError, setRetireError] = useState("");
 
   const selectedSeasonId = searchParams.get("season") ?? "all";
   const seasonQuery = selectedSeasonId === "all" ? "" : `?season=${selectedSeasonId}`;
@@ -369,14 +396,16 @@ export default function PlayerDetailPage() {
     setLoading(true);
     setError("");
     try {
-      const [playerResult, statsResult, seasonResult] = await Promise.all([
+      const [playerResult, statsResult, seasonResult, detailResult] = await Promise.all([
         cachedApiRequest("/players", { force }),
         cachedApiRequest(`/leaderboard/players/${playerId}/stats${buildQuery({ season: selectedSeasonId })}`, { force }),
         cachedApiRequest("/leaderboard/seasons", { force }),
+        cachedApiRequest(`/players/${playerId}`, { force }),
       ]);
       setPlayers(playerResult.players);
       setData(statsResult);
       setSeasons(seasonResult.seasons);
+      setPlayerDetail(detailResult.player);
     } catch (err) {
       setError(err?.message ?? String(err));
     } finally {
@@ -387,6 +416,69 @@ export default function PlayerDetailPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // 球员全部比赛（练习+直播去重），按时间倒序，供高光挑选
+  const allMatches = useMemo(() => {
+    const map = new Map();
+    for (const m of [...(data?.practice?.matches ?? []), ...(data?.live?.matches ?? [])]) {
+      map.set(m.id, m);
+    }
+    return [...map.values()].sort((a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime());
+  }, [data]);
+
+  const isRetired = Boolean(playerDetail?.retired);
+
+  function openRetirePanel() {
+    setRetireNote(playerDetail?.retirementNote ?? "");
+    setRetireDate(playerDetail?.retiredAt ? isoToDayInput(playerDetail.retiredAt) : todayInput());
+    setHighlightIds(playerDetail?.highlightMatchIds ?? []);
+    setRetireError("");
+    setRetireOpen(true);
+  }
+
+  function toggleHighlight(id) {
+    setHighlightIds((cur) => {
+      if (cur.includes(id)) return cur.filter((x) => x !== id);
+      if (cur.length >= 3) return cur;
+      return [...cur, id];
+    });
+  }
+
+  async function confirmRetire() {
+    setRetireSaving(true);
+    setRetireError("");
+    try {
+      await apiRequest(`/players/${playerId}/retirement`, {
+        method: "PATCH",
+        body: jsonBody({
+          retired: true,
+          retirementNote: retireNote.trim(),
+          retiredAt: dayInputToISO(retireDate),
+          highlightMatchIds: highlightIds,
+        }),
+      });
+      invalidatePoolDataCache();
+      invalidateApiCache(["/retired", `/players/${playerId}`]);
+      setRetireOpen(false);
+      await load(true);
+    } catch (err) {
+      setRetireError(err?.message ?? String(err));
+    } finally {
+      setRetireSaving(false);
+    }
+  }
+
+  async function returnPlayer() {
+    if (!window.confirm(t("确定让该球员回归吗？回归后将重新出现在街灯榜与胜负榜。", "Bring this player back? They will reappear on the leaderboards."))) return;
+    try {
+      await apiRequest(`/players/${playerId}/retirement`, { method: "PATCH", body: jsonBody({ retired: false }) });
+      invalidatePoolDataCache();
+      invalidateApiCache(["/retired", `/players/${playerId}`]);
+      await load(true);
+    } catch (err) {
+      setError(err?.message ?? String(err));
+    }
+  }
 
   function handleSeasonChange(nextSeasonId) {
     const nextParams = new URLSearchParams(searchParams);
@@ -403,7 +495,17 @@ export default function PlayerDetailPage() {
     <div>
       <div className="playerDetailHero">
         <div className="playerDetailTitleBlock">
-          <h1 className="h1">{data.player.name}</h1>
+          <h1 className="h1">
+            {data.player.name}
+            {isRetired && (
+              <span className="badge" style={{ marginLeft: 10, verticalAlign: "middle", borderColor: "rgba(100,116,139,.5)", color: "var(--muted)" }}>
+                {t("已退役", "Retired")}
+              </span>
+            )}
+          </h1>
+          {isRetired && playerDetail?.retirementNote && (
+            <div style={{ marginTop: 2, fontWeight: 800, color: "var(--primary)" }}>“{playerDetail.retirementNote}”</div>
+          )}
           <p className="sub">{t(
             "分标签战绩：练习赛 + 直播。数据来自正式比赛记录。",
             "Per-tag records: Practice + Live. Data sourced from official match records.",
@@ -413,6 +515,18 @@ export default function PlayerDetailPage() {
         {isOwnPlayerPage && <AccountSettingsForm compact />}
 
         <div className="row playerDetailControls">
+          {isAdmin && (
+            <div className="playerDetailRetireControls">
+              {isRetired ? (
+                <>
+                  <button className="btn" type="button" onClick={openRetirePanel}>{t("编辑退役信息", "Edit Retirement")}</button>
+                  <button className="btn btnBrand" type="button" onClick={returnPlayer}>{t("回归", "Return")}</button>
+                </>
+              ) : (
+                <button className="btn" type="button" onClick={openRetirePanel}>{t("退役", "Retire")}</button>
+              )}
+            </div>
+          )}
           <select className="input playerDetailSeasonSelect" value={selectedSeasonId} onChange={(event) => handleSeasonChange(event.target.value)}>
             <option value="all">{t("全部赛季", "All seasons")}</option>
             {seasons.map((season) => <option key={season.id} value={season.id}>{season.label}</option>)}
@@ -421,6 +535,77 @@ export default function PlayerDetailPage() {
           <Link className="btn playerDetailBackButton" to="/players">{t("返回", "Back")}</Link>
         </div>
       </div>
+
+      {isAdmin && retireOpen && (
+        <div className="card" style={{ marginBottom: 14, borderColor: "rgba(100,116,139,.4)" }}>
+          <div className="rowBetween" style={{ marginBottom: 10 }}>
+            <div style={{ fontWeight: 950, fontSize: 16 }}>
+              {isRetired ? t("编辑退役信息", "Edit Retirement") : t("设置退役", "Retire Player")}
+            </div>
+            <button className="btn" type="button" onClick={() => setRetireOpen(false)}>{t("取消", "Cancel")}</button>
+          </div>
+
+          <div className="row" style={{ alignItems: "flex-end", gap: 12 }}>
+            <div style={{ width: 200, minWidth: 200 }}>
+              <div className="smallMuted">{t("退役日期", "Retirement Date")}</div>
+              <input className="input" type="date" value={retireDate} onChange={(e) => setRetireDate(e.target.value)} />
+            </div>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <div className="smallMuted">{t("备注 / 绰号（显示在名字旁）", "Note / nickname (shown by the name)")}</div>
+              <input className="input" value={retireNote} onChange={(e) => setRetireNote(e.target.value)} />
+            </div>
+          </div>
+
+          <div style={{ marginTop: 14 }}>
+            <div className="rowBetween" style={{ marginBottom: 8 }}>
+              <div className="smallMuted">{t("高光时刻（从该球员的比赛中最多选 3 场）", "Highlights (pick up to 3 of this player's matches)")}</div>
+              <span className="badge">{t(`已选 ${highlightIds.length} / 3`, `${highlightIds.length} / 3 selected`)}</span>
+            </div>
+
+            {allMatches.length === 0 ? (
+              <div className="playerDetailEmpty">{t("该球员暂无比赛记录可选。", "No matches available to pick.")}</div>
+            ) : (
+              <div className="retireHighlightPicker">
+                {allMatches.map((match) => {
+                  const isLeft = match.leftPlayerId === playerId;
+                  const meScore = isLeft ? match.leftScore : match.rightScore;
+                  const oppScore = isLeft ? match.rightScore : match.leftScore;
+                  const opponentId = isLeft ? match.rightPlayerId : match.leftPlayerId;
+                  const result = !match.winnerId ? "-" : match.winnerId === playerId ? t("胜", "W") : t("负", "L");
+                  const selected = highlightIds.includes(match.id);
+                  const disabled = !selected && highlightIds.length >= 3;
+                  return (
+                    <button
+                      key={match.id}
+                      type="button"
+                      className={`retireHighlightRow${selected ? " isSelected" : ""}`}
+                      onClick={() => toggleHighlight(match.id)}
+                      disabled={disabled}
+                    >
+                      <span className="retireHighlightCheck">{selected ? "✓" : ""}</span>
+                      <span className="retireHighlightMain">
+                        <span className="retireHighlightName">{match.matchName ?? t("未命名比赛", "Untitled Match")}</span>
+                        <span className="retireHighlightMeta">
+                          {formatDate(match.dateISO)} · {playerName(players, opponentId)} · {meScore}:{oppScore} · {result}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {retireError && <div className="errorBox" style={{ marginTop: 12 }}>{retireError}</div>}
+
+          <div className="row" style={{ marginTop: 14 }}>
+            <button className="btn btnBrand" type="button" disabled={retireSaving || !retireDate} onClick={confirmRetire}>
+              {retireSaving ? t("保存中...", "Saving...") : isRetired ? t("保存修改", "Save Changes") : t("确认退役", "Confirm Retirement")}
+            </button>
+            <button className="btn" type="button" onClick={() => setRetireOpen(false)}>{t("取消", "Cancel")}</button>
+          </div>
+        </div>
+      )}
 
       <RatingHistory history={data.fargoHistory} players={players} />
       <Section title={t("练习赛统计与记录", "Practice Stats & Records")} stats={data.practice} playerId={playerId} players={players} seasonQuery={seasonQuery} />
