@@ -71,6 +71,20 @@ export function serializeMatch(match) {
   };
 }
 
+export function serializeShameRecord(record) {
+  if (!record) return null;
+
+  return {
+    id: record.id,
+    dateISO: record.dateISO?.toISOString?.() ?? record.dateISO,
+    pins: record.pins,
+    loser: record.loser ? { id: record.loser.id, name: record.loser.name } : null,
+    participants: (record.participants ?? []).map((p) => ({ id: p.id, name: p.name })),
+    createdAt: record.createdAt?.toISOString?.() ?? record.createdAt,
+    updatedAt: record.updatedAt?.toISOString?.() ?? record.updatedAt,
+  };
+}
+
 export function serializeReport(report) {
   if (!report) return null;
 

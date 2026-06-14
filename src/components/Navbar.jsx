@@ -72,8 +72,8 @@ export default function Navbar() {
               <NavLink to="/leaderboard" className={linkClass} onClick={closeMenu}>
                 {t("街灯榜", "Street Light Leaderboard")}
               </NavLink>
-              <NavLink to="/win-lose-points" className={linkClass} onClick={closeMenu}>
-                {t("胜负积分", "Win/Loss Points")}
+              <NavLink to="/shame" className={linkClass} onClick={closeMenu}>
+                {t("耻辱柱", "Hall of Shame")}
               </NavLink>
               {isAdmin && (
                 <NavLink to="/admin/reports" className={linkClass} onClick={closeMenu}>

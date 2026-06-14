@@ -46,6 +46,7 @@ model User {
   reviewedReports  MatchReport[] @relation("ReviewedReports")
   auditLogs        AuditLog[]
   generatedAiReports AiReport[] @relation("GeneratedAiReports")
+  createdShameRecords ShameRecord[] @relation("CreatedShameRecords")
 }
 
 model Player {
@@ -71,6 +72,9 @@ model Player {
 
   aiReports         AiReport[] @relation("PlayerAiReports")
   aiOpponentReports AiReport[] @relation("AiReportOpponent")
+
+  shameLosses         ShameRecord[] @relation("ShameLoser")
+  shameParticipations ShameRecord[] @relation("ShameParticipants")
 }
 
 model Match {
@@ -174,4 +178,21 @@ model AiReport {
   @@index([generatedById])
   @@index([opponentId])
   @@index([cycleMatchId])
+}
+
+model ShameRecord {
+  id          String   @id @default(cuid())
+  dateISO     DateTime
+  loserId     String
+  pins        Int
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  loser        Player   @relation("ShameLoser", fields: [loserId], references: [id], onDelete: Restrict)
+  participants Player[] @relation("ShameParticipants")
+  createdBy    User?    @relation("CreatedShameRecords", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([dateISO])
+  @@index([loserId])
 }

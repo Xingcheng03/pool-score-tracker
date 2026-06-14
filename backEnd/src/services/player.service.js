@@ -84,7 +84,7 @@ export async function setPlayerVisibility(id, input) {
 }
 
 export async function deletePlayer(id) {
-  const [matches, reports] = await Promise.all([
+  const [matches, reports, shameLosses] = await Promise.all([
     prisma.match.count({
       where: {
         OR: [
@@ -107,9 +107,10 @@ export async function deletePlayer(id) {
         ],
       },
     }),
+    prisma.shameRecord.count({ where: { loserId: id } }),
   ]);
 
-  if (matches > 0 || reports > 0) {
+  if (matches > 0 || reports > 0 || shameLosses > 0) {
     throw httpError(409, "This player has match data and cannot be deleted. Rename instead.");
   }
 

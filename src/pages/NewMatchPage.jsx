@@ -219,7 +219,11 @@ export default function NewMatchPage() {
 
           <div className="matchField matchRaceField" style={{ width: 140, minWidth: 140 }}>
             <div className="smallMuted">{t("抢几", "Race To")}</div>
-            <input className="input" type="number" min="1" value={raceTo} onChange={(e) => setRaceTo(Number(e.target.value))} />
+            <div className="stepper">
+              <button className="btn stepperBtn" type="button" onClick={() => setRaceTo((v) => Math.max(1, Number(v) - 1))} aria-label={t("减少", "Decrease")}>−</button>
+              <div className="stepperValue">{raceTo}</div>
+              <button className="btn stepperBtn" type="button" onClick={() => setRaceTo((v) => Number(v) + 1)} aria-label={t("增加", "Increase")}>＋</button>
+            </div>
           </div>
 
           <div className="matchField matchTagField" style={{ width: 200, minWidth: 200 }}>
