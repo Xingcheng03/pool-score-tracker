@@ -6,7 +6,6 @@ import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 import AccountPage from "./pages/AccountPage.jsx";
 import AdminReportsPage from "./pages/AdminReportsPage.jsx";
-import AiAnalysisPage from "./pages/AiAnalysisPage.jsx";
 import LeaderboardPage from "./pages/LeaderboardPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import MatchesPage from "./pages/MatchesPage.jsx";
@@ -35,7 +34,6 @@ export default function App() {
           <Route path="/leaderboard" element={<ProtectedPage><LeaderboardPage /></ProtectedPage>} />
           <Route path="/shame" element={<ProtectedPage><ShamePage /></ProtectedPage>} />
           <Route path="/history" element={<ProtectedPage><HistoricalPlayersPage /></ProtectedPage>} />
-          <Route path="/ai-analysis" element={<ProtectedPage><AiAnalysisPage /></ProtectedPage>} />
           <Route path="/account" element={<ProtectedPage><AccountPage /></ProtectedPage>} />
           <Route path="/admin/reports" element={<ProtectedPage adminOnly><AdminReportsPage /></ProtectedPage>} />
           <Route path="*" element={<Navigate to="/matches" replace />} />

@@ -45,7 +45,6 @@ model User {
   submittedReports MatchReport[] @relation("SubmittedReports")
   reviewedReports  MatchReport[] @relation("ReviewedReports")
   auditLogs        AuditLog[]
-  generatedAiReports AiReport[] @relation("GeneratedAiReports")
   createdShameRecords ShameRecord[] @relation("CreatedShameRecords")
 }
 
@@ -72,9 +71,6 @@ model Player {
   wonReports       MatchReport[] @relation("WinnerReports")
   handicapReportGiven    MatchReport[] @relation("HandicapGiverReports")
   handicapReportReceived MatchReport[] @relation("HandicapReceiverReports")
-
-  aiReports         AiReport[] @relation("PlayerAiReports")
-  aiOpponentReports AiReport[] @relation("AiReportOpponent")
 
   shameLosses         ShameRecord[] @relation("ShameLoser")
   shameParticipations ShameRecord[] @relation("ShameParticipants")
@@ -105,7 +101,6 @@ model Match {
   handicapGiver    Player? @relation("HandicapGiverMatches", fields: [handicapGiverId], references: [id], onDelete: SetNull)
   handicapReceiver Player? @relation("HandicapReceiverMatches", fields: [handicapReceiverId], references: [id], onDelete: SetNull)
   sourceReport     MatchReport? @relation("ApprovedMatch")
-  aiReportCycles   AiReport[] @relation("AiReportCycleMatch")
   highlightedBy    Player[] @relation("PlayerHighlights")
 
   @@index([dateISO])
@@ -160,30 +155,6 @@ model AuditLog {
   createdAt DateTime    @default(now())
 
   actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
-}
-
-model AiReport {
-  id            String   @id @default(cuid())
-  playerId      String
-  reportType    String
-  opponentId    String?
-  cycleKey      String
-  cycleMatchId  String?
-  generatedById String
-  request       Json
-  response      Json
-  createdAt     DateTime @default(now())
-
-  player      Player @relation("PlayerAiReports", fields: [playerId], references: [id], onDelete: Cascade)
-  opponent    Player? @relation("AiReportOpponent", fields: [opponentId], references: [id], onDelete: SetNull)
-  cycleMatch  Match? @relation("AiReportCycleMatch", fields: [cycleMatchId], references: [id], onDelete: SetNull)
-  generatedBy User @relation("GeneratedAiReports", fields: [generatedById], references: [id], onDelete: Restrict)
-
-  @@index([playerId, cycleKey, reportType])
-  @@index([playerId, createdAt])
-  @@index([generatedById])
-  @@index([opponentId])
-  @@index([cycleMatchId])
 }
 
 model ShameRecord {
