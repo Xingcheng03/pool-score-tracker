@@ -21,6 +21,25 @@ export default function AdminReportsPage() {
     return players.find((player) => player.id === id)?.name ?? t("未知球员", "Unknown player");
   }
 
+  function isDoubles(report) {
+    return report.matchType === "doubles";
+  }
+
+  function teamLabel(report, side) {
+    if (!isDoubles(report)) {
+      return playerName(side === "left" ? report.leftPlayerId : report.rightPlayerId);
+    }
+    const p1 = side === "left" ? report.leftPlayerId : report.rightPlayerId;
+    const p2 = side === "left" ? report.leftPlayer2Id : report.rightPlayer2Id;
+    return `${playerName(p1)} / ${playerName(p2)}`;
+  }
+
+  function winnerLabel(report) {
+    if (!isDoubles(report)) return playerName(report.winnerId);
+    const leftWon = report.leftScore > report.rightScore;
+    return teamLabel(report, leftWon ? "left" : "right");
+  }
+
   function statusLabel(s) {
     if (s === "PENDING") return t("待审核", "Pending");
     if (s === "APPROVED") return t("已通过", "Approved");
@@ -178,14 +197,17 @@ export default function AdminReportsPage() {
                 ) : (
                   reports.map((report) => (
                     <tr key={report.id}>
-                      <td style={{ fontWeight: 900 }}>{report.matchName}</td>
+                      <td style={{ fontWeight: 900 }}>
+                        {report.matchName}
+                        {isDoubles(report) && <span className="badge" style={{ marginLeft: 6 }}>{t("双打", "Doubles")}</span>}
+                      </td>
                       <td>{fmtDate(report.dateISO)}</td>
                       <td>{tagLabel(report.tag)}</td>
-                      <td>{playerName(report.leftPlayerId)}</td>
+                      <td>{teamLabel(report, "left")}</td>
                       <td>{report.leftScore} : {report.rightScore}</td>
-                      <td>{playerName(report.rightPlayerId)}</td>
-                      <td>{playerName(report.winnerId)}</td>
-                      <td>{handicapLabel(report)}</td>
+                      <td>{teamLabel(report, "right")}</td>
+                      <td>{winnerLabel(report)}</td>
+                      <td>{isDoubles(report) ? "-" : handicapLabel(report)}</td>
                       <td>{reporterPlayerName(report)}</td>
                       <td>{statusLabel(report.status)}</td>
                       <td>

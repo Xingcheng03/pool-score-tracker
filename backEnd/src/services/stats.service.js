@@ -2,7 +2,6 @@ import { prisma } from "../lib/prisma.js";
 import { serializeMatch } from "./shape.service.js";
 import {
   buildFargoLiteLeaderboardFromData,
-  buildWinLoseRowsFromData,
   calcPlayerStats,
   filterMatchesBySeason,
   getAvailableSeasons,
@@ -94,18 +93,6 @@ export async function getLeaderboard(query = {}) {
   });
 }
 
-export async function getWinLosePoints(query = {}) {
-  const key = cacheKey("winLose", query);
-  const cached = getCachedResult(key);
-  if (cached) return cached;
-
-  const { players, matches } = await getStatsData();
-  return setCachedResult(key, buildWinLoseRowsFromData(players, matches, {
-    q: query.q ?? "",
-    cutoffISO: query.cutoffISO ?? "",
-  }));
-}
-
 export async function getSeasons() {
   const key = "seasons";
   const cached = getCachedResult(key);
@@ -116,13 +103,12 @@ export async function getSeasons() {
 }
 
 export async function getLeaderboardSummary(query = {}) {
-  const [leaderboard, winLose, seasons] = await Promise.all([
+  const [leaderboard, seasons] = await Promise.all([
     getLeaderboard(query),
-    getWinLosePoints({ q: query.q ?? "" }),
     getSeasons(),
   ]);
 
-  return { leaderboard, winLose, seasons };
+  return { leaderboard, seasons };
 }
 
 export async function getPlayerStats(playerId, query = {}) {

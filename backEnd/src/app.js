@@ -10,6 +10,7 @@ import { matchReportsRouter } from "./routes/matchReports.routes.js";
 import { playersRouter } from "./routes/players.routes.js";
 import { retiredRouter } from "./routes/retired.routes.js";
 import { shameRouter } from "./routes/shame.routes.js";
+import { tournamentRouter } from "./routes/tournament.routes.js";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
 
 export const app = express();
@@ -30,6 +31,7 @@ app.use("/api/match-reports", matchReportsRouter);
 app.use("/api/leaderboard", leaderboardRouter);
 app.use("/api/shame", shameRouter);
 app.use("/api/retired", retiredRouter);
+app.use("/api/tournaments", tournamentRouter);
 app.use("/api/data", dataRouter);
 
 app.use(notFound);

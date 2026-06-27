@@ -14,6 +14,8 @@ import PlayerDetailPage from "./pages/PlayerDetailPage.jsx";
 import HistoricalPlayersPage from "./pages/HistoricalPlayersPage.jsx";
 import PlayersPage from "./pages/PlayersPage.jsx";
 import ShamePage from "./pages/ShamePage.jsx";
+import TournamentsPage from "./pages/TournamentsPage.jsx";
+import TournamentDetailPage from "./pages/TournamentDetailPage.jsx";
 
 function ProtectedPage({ children, adminOnly = false }) {
   return <ProtectedRoute adminOnly={adminOnly}>{children}</ProtectedRoute>;
@@ -33,6 +35,8 @@ export default function App() {
           <Route path="/new" element={<ProtectedPage><NewMatchPage /></ProtectedPage>} />
           <Route path="/leaderboard" element={<ProtectedPage><LeaderboardPage /></ProtectedPage>} />
           <Route path="/shame" element={<ProtectedPage><ShamePage /></ProtectedPage>} />
+          <Route path="/tournaments" element={<ProtectedPage><TournamentsPage /></ProtectedPage>} />
+          <Route path="/tournaments/:tournamentId" element={<ProtectedPage><TournamentDetailPage /></ProtectedPage>} />
           <Route path="/history" element={<ProtectedPage><HistoricalPlayersPage /></ProtectedPage>} />
           <Route path="/account" element={<ProtectedPage><AccountPage /></ProtectedPage>} />
           <Route path="/admin/reports" element={<ProtectedPage adminOnly><AdminReportsPage /></ProtectedPage>} />

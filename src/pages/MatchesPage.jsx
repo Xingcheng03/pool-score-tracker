@@ -17,6 +17,24 @@ function playerName(playerMap, id) {
   return playerMap.get(id) ?? "Unknown";
 }
 
+function isDoublesMatch(match) {
+  return match.matchType === "doubles";
+}
+
+function teamName(playerMap, match, side) {
+  if (!isDoublesMatch(match)) {
+    return playerName(playerMap, side === "left" ? match.leftPlayerId : match.rightPlayerId);
+  }
+  const p1 = side === "left" ? match.leftPlayerId : match.rightPlayerId;
+  const p2 = side === "left" ? match.leftPlayer2Id : match.rightPlayer2Id;
+  return `${playerName(playerMap, p1)} / ${playerName(playerMap, p2)}`;
+}
+
+function winnerName(playerMap, match) {
+  if (!isDoublesMatch(match)) return playerName(playerMap, match.winnerId);
+  return teamName(playerMap, match, match.leftScore > match.rightScore ? "left" : "right");
+}
+
 function todayName() {
   const date = new Date();
   const pad = (n) => String(n).padStart(2, "0");
@@ -208,11 +226,14 @@ export default function MatchesPage() {
                       <td style={{ fontWeight: 900 }}>{tagLabel(match.tag)}</td>
                       <td style={{ fontWeight: 900 }}>{match.matchName}</td>
                       <td>{fmtDate(match.dateISO)}</td>
-                      <td>{t(`抢 ${match.raceTo}`, `Race to ${match.raceTo}`)}</td>
-                      <td>{playerName(playerMap, match.leftPlayerId)}</td>
+                      <td>
+                        {t(`抢 ${match.raceTo}`, `Race to ${match.raceTo}`)}
+                        {isDoublesMatch(match) && <span className="badge" style={{ marginLeft: 6 }}>{t("双打", "Doubles")}</span>}
+                      </td>
+                      <td>{teamName(playerMap, match, "left")}</td>
                       <td>{match.leftScore} : {match.rightScore}</td>
-                      <td>{playerName(playerMap, match.rightPlayerId)}</td>
-                      <td>{playerName(playerMap, match.winnerId)}</td>
+                      <td>{teamName(playerMap, match, "right")}</td>
+                      <td>{winnerName(playerMap, match)}</td>
                       <td className="matchHandicapCell">
                         <span className="matchHandicapValue">
                           <span className="matchHandicapStatus">{match.isHandicap ? t("是", "Yes") : t("否", "No")}</span>

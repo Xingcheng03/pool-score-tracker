@@ -6,7 +6,6 @@ import {
   getLeaderboardSummary,
   getPlayerStats,
   getSeasons,
-  getWinLosePoints,
 } from "../services/stats.service.js";
 
 export const leaderboardRouter = Router();
@@ -15,10 +14,6 @@ leaderboardRouter.use(requireAuth);
 
 leaderboardRouter.get("/", asyncHandler(async (req, res) => {
   res.json(await getLeaderboard(req.query));
-}));
-
-leaderboardRouter.get("/win-lose", asyncHandler(async (req, res) => {
-  res.json(await getWinLosePoints(req.query));
 }));
 
 leaderboardRouter.get("/seasons", asyncHandler(async (_req, res) => {

@@ -3350,3 +3350,188 @@ tbody tr:hover td {
     opacity: 0.35;
   }
 }
+
+/* ===== Tournaments / Bracket ===== */
+.tournamentGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.tournamentCard { display: flex; flex-direction: column; }
+.tStatus {
+  font-size: 12px;
+  font-weight: 900;
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.tStatusDraft { background: var(--soft); color: var(--muted); }
+.tStatusOngoing { background: var(--primarySoft); color: var(--primary); }
+.tStatusFinished { background: #eafaf1; color: var(--success); }
+
+.tChampionCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--warning);
+  background: #fffaf0;
+}
+
+.tPickerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radiusSm);
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text);
+}
+.tPickerHeader:hover { background: var(--softHover); }
+.tPickerChevron { color: var(--muted); font-size: 12px; }
+
+.tParticipantGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tParticipantChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  user-select: none;
+}
+.tParticipantChipOn { border-color: var(--primary); background: var(--primarySoft); color: var(--primary); }
+
+.bracketScroll { overflow-x: auto; padding-bottom: 8px; -webkit-overflow-scrolling: touch; text-align: center; }
+.bracket {
+  display: inline-flex;
+  gap: 28px;
+  min-width: min-content;
+  align-items: stretch;
+  text-align: left;
+  position: relative;
+}
+.bracketLines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 0;
+}
+.bracketLines path {
+  fill: none;
+  stroke: #111827;
+  stroke-width: 1.5;
+}
+.bracketRound {
+  display: flex;
+  flex-direction: column;
+  min-width: 210px;
+  position: relative;
+  z-index: 1;
+}
+.bracketRoundTitle {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 10px;
+}
+.bracketRoundBody {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  flex: 1;
+  gap: 14px;
+}
+.bracketNode {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radiusSm);
+  box-shadow: var(--shadowSoft);
+  padding: 8px 10px;
+}
+.bracketNodeDone { border-color: var(--primary); }
+.bracketNodeClickable { cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s, transform 0.15s; }
+.bracketNodeClickable:hover { border-color: var(--primary); box-shadow: var(--shadow); transform: translateY(-1px); }
+.bracketRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 0;
+}
+.bracketRow + .bracketRow { border-top: 1px dashed var(--line); }
+.tTeam { font-weight: 700; font-size: 13px; color: var(--text); }
+.tTeamWin { color: var(--primary); font-weight: 900; }
+.tTeamLose { color: var(--muted); font-weight: 600; }
+.bracketScore { font-weight: 900; font-variant-numeric: tabular-nums; min-width: 16px; text-align: right; }
+
+.bracketScoreInput { width: 56px; text-align: center; padding: 6px; }
+.bracketTeamEdit { display: flex; flex-direction: column; gap: 6px; }
+
+/* 对阵节点弹窗 */
+.tModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 1000;
+}
+.tModal {
+  width: 100%;
+  max-width: 420px;
+  max-height: 88vh;
+  overflow-y: auto;
+  margin: 0;
+}
+.tModalMatch {
+  border: 1px solid var(--line);
+  border-radius: var(--radiusSm);
+  padding: 8px 12px;
+  background: var(--soft);
+}
+.tModalSection {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+/* 表头：徽章靠左、按钮靠右，始终保持同一行（含手机端）。 */
+.tHeadRow { flex-wrap: nowrap; }
+.tHeadBadges { flex: 1 1 auto; min-width: 0; }
+.tHeadActions { flex: 0 0 auto; }
+
+/* 手机端：对阵图竖直居中在屏幕剩余高度里。横向始终从左侧开始（图比屏幕宽，便于滚动）。 */
+@media (max-width: 640px) {
+  /* 覆盖全局 .rowBetween > .row { width:100% }，避免表头按钮被挤到下一行。 */
+  .tHeadRow.rowBetween > .row { width: auto; }
+  .tHeadActions { flex-wrap: nowrap; }
+
+  .bracketScroll {
+    min-height: calc(100vh - 250px);
+    min-height: calc(100dvh - 250px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+  }
+}

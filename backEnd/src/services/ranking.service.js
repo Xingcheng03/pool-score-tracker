@@ -2,17 +2,20 @@ const SEASON_START_YEAR = 2025;
 const SEASON_START_MONTH = 9; // October, zero-based.
 const SEASON_MONTHS = 3;
 
-const BASE_POINTS = 1000;
-const WIN_POINTS = 20;
-const LOSE_POINTS = 15;
-const STREAK_BONUS = 10;
+// 双打进入街灯榜 Rating 的权重系数（相对单打）。娱乐向、影响略小，可调。
+const DOUBLES_RATING_WEIGHT = 0.5;
 
 export function normalizeTag(tag) {
   return tag === "live" ? "live" : "practice";
 }
 
-function compareStr(a, b) {
-  return String(a).localeCompare(String(b), "zh-Hans-CN", { sensitivity: "base" });
+// 老数据无 matchType，默认单打。
+function isSinglesMatch(match) {
+  return match?.matchType !== "DOUBLES" && match?.matchType !== "doubles";
+}
+
+function isDoublesMatch(match) {
+  return !isSinglesMatch(match);
 }
 
 function monthIndex(year, month) {
@@ -112,8 +115,16 @@ export function getAvailableSeasons(matchesInput = []) {
   });
 }
 
+// 球员参与的比赛：单打看左右，双打也看 player2。两者都算进去。
+function playerOnLeft(m, playerId) {
+  return m.leftPlayerId === playerId || m.leftPlayer2Id === playerId;
+}
+function playerOnRight(m, playerId) {
+  return m.rightPlayerId === playerId || m.rightPlayer2Id === playerId;
+}
+
 export function getMatchesForPlayer(playerId, tag = "all", matchesOverride = []) {
-  let filtered = matchesOverride.filter((m) => m.leftPlayerId === playerId || m.rightPlayerId === playerId);
+  let filtered = matchesOverride.filter((m) => playerOnLeft(m, playerId) || playerOnRight(m, playerId));
 
   if (tag !== "all") {
     const t = normalizeTag(tag);
@@ -151,19 +162,34 @@ export function calcPlayerStats(playerId, opts = {}) {
   const lostTo = new Map();
 
   for (const m of matches) {
-    const isLeft = m.leftPlayerId === playerId;
-    const opponentId = isLeft ? m.rightPlayerId : m.leftPlayerId;
+    const onLeft = playerOnLeft(m, playerId);
+    const doubles = isDoublesMatch(m);
 
-    if (!m.winnerId) continue;
+    // 对手：单打 1 个；双打是对方两人。
+    const opponentIds = doubles
+      ? (onLeft ? [m.rightPlayerId, m.rightPlayer2Id] : [m.leftPlayerId, m.leftPlayer2Id]).filter(Boolean)
+      : [onLeft ? m.rightPlayerId : m.leftPlayerId].filter(Boolean);
+
+    // 胜负：双打按本方队伍比分判；单打沿用 winnerId。
+    let didWin;
+    if (doubles) {
+      const myScore = onLeft ? Number(m.leftScore ?? 0) : Number(m.rightScore ?? 0);
+      const oppScore = onLeft ? Number(m.rightScore ?? 0) : Number(m.leftScore ?? 0);
+      if (myScore === oppScore) continue;
+      didWin = myScore > oppScore;
+    } else {
+      if (!m.winnerId) continue;
+      didWin = m.winnerId === playerId;
+    }
 
     const factor = handicapStatsFactor(m, playerId);
 
-    if (m.winnerId === playerId) {
+    if (didWin) {
       wins += factor;
-      beaten.set(opponentId, (beaten.get(opponentId) || 0) + factor);
+      for (const oid of opponentIds) beaten.set(oid, (beaten.get(oid) || 0) + factor);
     } else {
       losses += factor;
-      lostTo.set(opponentId, (lostTo.get(opponentId) || 0) + factor);
+      for (const oid of opponentIds) lostTo.set(oid, (lostTo.get(oid) || 0) + factor);
     }
   }
 
@@ -263,6 +289,7 @@ function clamp(n, a, b) {
 
 function calcRackStatsForPlayerHalf(playerId, matchesAll, mode) {
   const m = normalizeMode(mode);
+  // 单打 + 双打都计入街灯榜的局分统计。
   const filtered = m === "all" ? matchesAll : matchesAll.filter((x) => x.tag === m);
 
   let effMatches = 0;
@@ -275,8 +302,8 @@ function calcRackStatsForPlayerHalf(playerId, matchesAll, mode) {
   const recent = [];
 
   for (const match of filtered) {
-    const isLeft = match.leftPlayerId === playerId;
-    const isRight = match.rightPlayerId === playerId;
+    const isLeft = match.leftPlayerId === playerId || match.leftPlayer2Id === playerId;
+    const isRight = match.rightPlayerId === playerId || match.rightPlayer2Id === playerId;
     if (!isLeft && !isRight) continue;
 
     const my = isLeft ? Number(match.leftScore ?? 0) : Number(match.rightScore ?? 0);
@@ -475,6 +502,7 @@ function runFargoLiteRatings(players, matches, onMatchApplied) {
   const rating = new Map(players.map((p) => [p.id, 500]));
   const played = new Map(players.map((p) => [p.id, 0]));
 
+  // 街灯榜 Rating：单打 + 双打都按局分 ELO 重放（双打用两队平均 Rating 计算预期）。
   const sorted = sortMatchesForRatingReplay(matches);
 
   const K = 40;
@@ -499,14 +527,48 @@ function runFargoLiteRatings(players, matches, onMatchApplied) {
   const playerIds = players.map((p) => p.id);
 
   for (const m of sorted) {
-    const A = m.leftPlayerId;
-    const B = m.rightPlayerId;
-    if (!A || !B) continue;
-
     const aScore = Number(m.leftScore ?? 0);
     const bScore = Number(m.rightScore ?? 0);
     const totalRacks = aScore + bScore;
     if (totalRacks <= 0) continue;
+
+    const tag = m.tag === "live" ? "live" : "practice";
+
+    // 双打：两队各取两人 Rating 平均算预期，四人各按自己的稳定系数同涨同跌。
+    if (isDoublesMatch(m)) {
+      const teamA = [m.leftPlayerId, m.leftPlayer2Id].filter(Boolean);
+      const teamB = [m.rightPlayerId, m.rightPlayer2Id].filter(Boolean);
+      if (teamA.length < 2 || teamB.length < 2) continue;
+
+      const ratingOf = (id) => rating.get(id) ?? 500;
+      const Ra = (ratingOf(teamA[0]) + ratingOf(teamA[1])) / 2;
+      const Rb = (ratingOf(teamB[0]) + ratingOf(teamB[1])) / 2;
+      const expectedA = expectedRackWinRate(Ra, Rb, D);
+      const actualA = aScore / totalRacks;
+      const delta = K * (actualA - expectedA) * BASE_WEIGHT_BY_TAG[tag] * DOUBLES_RATING_WEIGHT;
+
+      const involved = [];
+      for (const id of teamA) {
+        const p = played.get(id) ?? 0;
+        const next = ratingOf(id) + delta * (1 / Math.sqrt(1 + p / 10));
+        rating.set(id, next);
+        played.set(id, p + 1);
+        involved.push({ id, side: "A", ratingAfter: next });
+      }
+      for (const id of teamB) {
+        const p = played.get(id) ?? 0;
+        const next = ratingOf(id) - delta * (1 / Math.sqrt(1 + p / 10));
+        rating.set(id, next);
+        played.set(id, p + 1);
+        involved.push({ id, side: "B", ratingAfter: next });
+      }
+      onMatchApplied?.({ match: m, involved });
+      continue;
+    }
+
+    const A = m.leftPlayerId;
+    const B = m.rightPlayerId;
+    if (!A || !B) continue;
 
     const Ra = rating.get(A) ?? 500;
     const Rb = rating.get(B) ?? 500;
@@ -514,7 +576,6 @@ function runFargoLiteRatings(players, matches, onMatchApplied) {
     const expectedA = expectedRackWinRate(Ra, Rb, D);
     const actualA = aScore / totalRacks;
 
-    const tag = m.tag === "live" ? "live" : "practice";
     const baseWeight = BASE_WEIGHT_BY_TAG[tag];
 
     const pa = played.get(A) ?? 0;
@@ -567,14 +628,10 @@ function runFargoLiteRatings(players, matches, onMatchApplied) {
 
     onMatchApplied?.({
       match: m,
-      leftPlayerId: A,
-      rightPlayerId: B,
-      leftRatingBefore: Ra,
-      rightRatingBefore: Rb,
-      leftRatingAfter: nextRa,
-      rightRatingAfter: nextRb,
-      leftPlayedAfter: pa + 1,
-      rightPlayedAfter: pb + 1,
+      involved: [
+        { id: A, side: "A", ratingAfter: nextRa },
+        { id: B, side: "B", ratingAfter: nextRb },
+      ],
     });
   }
 
@@ -601,15 +658,15 @@ export function getPlayerFargoRatingHistoryFromData(playerId, players, matches) 
   const points = [];
   let previousRating = 500;
 
-  runFargoLiteRatings(players, matches, ({ match, leftPlayerId, rightPlayerId, leftRatingAfter, rightRatingAfter }) => {
-    if (leftPlayerId !== playerId && rightPlayerId !== playerId) return;
+  runFargoLiteRatings(players, matches, ({ match, involved }) => {
+    const me = involved.find((x) => x.id === playerId);
+    if (!me) return;
 
-    const isLeft = leftPlayerId === playerId;
-    const rating = isLeft ? leftRatingAfter : rightRatingAfter;
-    const opponentId = isLeft ? rightPlayerId : leftPlayerId;
+    const rating = me.ratingAfter;
+    const opponentId = involved.find((x) => x.side !== me.side)?.id ?? null;
     const delta = rating - previousRating;
-    const myScore = isLeft ? match.leftScore : match.rightScore;
-    const opponentScore = isLeft ? match.rightScore : match.leftScore;
+    const myScore = me.side === "A" ? match.leftScore : match.rightScore;
+    const opponentScore = me.side === "A" ? match.rightScore : match.leftScore;
 
     points.push({
       matchId: match.id,
@@ -637,124 +694,5 @@ export function getPlayerFargoRatingHistoryFromData(playerId, players, matches) 
     highestRating: Math.max(...values),
     lowestRating: Math.min(...values),
     points,
-  };
-}
-
-function safeTime(iso) {
-  const t = new Date(iso).getTime();
-  return Number.isFinite(t) ? t : 0;
-}
-
-function tierFromPoints(points) {
-  if (points >= 1400) return "王者";
-  if (points >= 1300) return "大师";
-  if (points >= 1200) return "钻石";
-  if (points >= 1100) return "铂金";
-  if (points >= 1000) return "黄金";
-  if (points >= 900) return "白银";
-  return "青铜";
-}
-
-export function buildWinLoseRowsFromData(players, matches, opts = {}) {
-  const q = String(opts.q ?? "").trim().toLowerCase();
-  const cutoffMs = opts.cutoffISO ? safeTime(opts.cutoffISO) : Infinity;
-
-  const state = new Map(
-    players.map((p) => [
-      p.id,
-      {
-        id: p.id,
-        name: p.name ?? "Unknown",
-        hidden: p.hidden ?? false,
-        retired: p.retired ?? false,
-        points: BASE_POINTS,
-        wins: 0,
-        losses: 0,
-        played: 0,
-        winStreak: 0,
-        loseStreak: 0,
-        lastMatchISO: null,
-      },
-    ]),
-  );
-
-  const ordered = [...matches]
-    .filter((m) => safeTime(m.dateISO) <= cutoffMs)
-    .sort((a, b) => safeTime(a.dateISO) - safeTime(b.dateISO));
-
-  const logs = [];
-
-  for (const m of ordered) {
-    if (!m?.winnerId) continue;
-
-    const leftId = m.leftPlayerId;
-    const rightId = m.rightPlayerId;
-    const winnerId = m.winnerId;
-    const loserId = winnerId === leftId ? rightId : winnerId === rightId ? leftId : null;
-
-    if (!winnerId || !loserId) continue;
-
-    const winner = state.get(winnerId);
-    const loser = state.get(loserId);
-    if (!winner || !loser) continue;
-
-    winner.played += 1;
-    loser.played += 1;
-    winner.wins += 1;
-    loser.losses += 1;
-
-    winner.winStreak += 1;
-    winner.loseStreak = 0;
-    loser.loseStreak += 1;
-    loser.winStreak = 0;
-
-    let winnerDelta = WIN_POINTS;
-    let loserDelta = -LOSE_POINTS;
-
-    if (winner.winStreak % 3 === 0) winnerDelta += STREAK_BONUS;
-    if (loser.loseStreak % 3 === 0) loserDelta -= STREAK_BONUS;
-
-    winner.points += winnerDelta;
-    loser.points += loserDelta;
-
-    winner.lastMatchISO = m.dateISO;
-    loser.lastMatchISO = m.dateISO;
-
-    logs.push({
-      id: m.id,
-      dateISO: m.dateISO,
-      matchName: m.matchName ?? "未命名比赛",
-      winnerId,
-      loserId,
-      winnerDelta,
-      loserDelta,
-      winnerStreak: winner.winStreak,
-      loserStreak: loser.loseStreak,
-    });
-  }
-
-  let rows = [...state.values()]
-    .filter((r) => !r.hidden && !r.retired)
-    .map((r) => ({
-      ...r,
-      tier: tierFromPoints(r.points),
-    }));
-
-  if (q) {
-    rows = rows.filter((r) => r.name.toLowerCase().includes(q));
-  }
-
-  rows.sort((a, b) => {
-    if (b.points !== a.points) return b.points - a.points;
-    if (b.wins !== a.wins) return b.wins - a.wins;
-    if (a.losses !== b.losses) return a.losses - b.losses;
-    return compareStr(a.name, b.name);
-  });
-
-  return {
-    rows,
-    logs,
-    totalMatchesInRange: ordered.length,
-    countedMatches: logs.length,
   };
 }

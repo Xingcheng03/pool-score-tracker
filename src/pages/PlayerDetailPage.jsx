@@ -123,18 +123,33 @@ function MatchTable({ stats, playerId, players, seasonQuery }) {
               </tr>
             ) : (
               stats.matches.map((match) => {
-                const isLeft = match.leftPlayerId === playerId;
-                const meScore = isLeft ? match.leftScore : match.rightScore;
-                const opponentScore = isLeft ? match.rightScore : match.leftScore;
-                const opponentId = isLeft ? match.rightPlayerId : match.leftPlayerId;
-                const result = !match.winnerId ? "-" : match.winnerId === playerId ? "Win" : "Loss";
+                const onLeft = match.leftPlayerId === playerId || match.leftPlayer2Id === playerId;
+                const isDoubles = match.matchType === "doubles";
+                const meScore = onLeft ? match.leftScore : match.rightScore;
+                const opponentScore = onLeft ? match.rightScore : match.leftScore;
+                const opponentIds = (isDoubles
+                  ? (onLeft ? [match.rightPlayerId, match.rightPlayer2Id] : [match.leftPlayerId, match.leftPlayer2Id])
+                  : [onLeft ? match.rightPlayerId : match.leftPlayerId]).filter(Boolean);
+                const result = isDoubles
+                  ? (meScore === opponentScore ? "-" : meScore > opponentScore ? "Win" : "Loss")
+                  : (!match.winnerId ? "-" : match.winnerId === playerId ? "Win" : "Loss");
 
                 return (
                   <tr key={match.id}>
                     <td className="playerDetailMatchName">{match.matchName ?? t("未命名比赛", "Untitled Match")}</td>
                     <td>{formatDate(match.dateISO)}</td>
-                    <td>{t(`抢 ${match.raceTo}`, `Race to ${match.raceTo}`)}</td>
-                    <td><Link to={`/players/${opponentId}${seasonQuery}`}>{playerName(players, opponentId)}</Link></td>
+                    <td>
+                      {t(`抢 ${match.raceTo}`, `Race to ${match.raceTo}`)}
+                      {isDoubles && <span className="badge" style={{ marginLeft: 6 }}>{t("双打", "Doubles")}</span>}
+                    </td>
+                    <td>
+                      {opponentIds.map((oid, i) => (
+                        <React.Fragment key={oid}>
+                          {i > 0 && " / "}
+                          <Link to={`/players/${oid}${seasonQuery}`}>{playerName(players, oid)}</Link>
+                        </React.Fragment>
+                      ))}
+                    </td>
                     <td>{meScore} : {opponentScore}</td>
                     <td>{match.isHandicap ? t("是", "Yes") : t("否", "No")}</td>
                     <td>{match.isHandicap ? playerName(players, match.handicapGiverId) : "-"}</td>

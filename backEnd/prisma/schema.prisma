@@ -18,6 +18,22 @@ enum MatchTag {
   LIVE
 }
 
+enum MatchType {
+  SINGLES
+  DOUBLES
+}
+
+enum TournamentFormat {
+  SINGLES
+  DOUBLES
+}
+
+enum TournamentStatus {
+  DRAFT
+  ONGOING
+  FINISHED
+}
+
 enum MatchReportStatus {
   PENDING
   APPROVED
@@ -89,6 +105,9 @@ model Match {
   rightScore         Int
   winnerId           String?
   tag                MatchTag @default(PRACTICE)
+  matchType          MatchType @default(SINGLES)
+  leftPlayer2Id      String?
+  rightPlayer2Id     String?
   isHandicap         Boolean  @default(false)
   handicapGiverId    String?
   handicapReceiverId String?
@@ -120,6 +139,9 @@ model MatchReport {
   rightScore         Int
   winnerId           String?
   tag                MatchTag          @default(PRACTICE)
+  matchType          MatchType         @default(SINGLES)
+  leftPlayer2Id      String?
+  rightPlayer2Id     String?
   isHandicap         Boolean           @default(false)
   handicapGiverId    String?
   handicapReceiverId String?
@@ -172,4 +194,61 @@ model ShameRecord {
 
   @@index([dateISO])
   @@index([loserId])
+}
+
+model Tournament {
+  id          String           @id @default(cuid())
+  name        String
+  format      TournamentFormat @default(SINGLES)
+  status      TournamentStatus @default(DRAFT)
+  raceTo      Int              @default(7)
+  tag         MatchTag         @default(PRACTICE)
+  createdById String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  participants TournamentParticipant[]
+  matches      TournamentMatch[]
+}
+
+// 参赛者。playerId / teammateId 用纯标量（不建 Player 外键），赛事为临时对阵数据，
+// 完整性由应用层保证；删比赛时靠 tournamentId 级联清理。
+model TournamentParticipant {
+  id           String   @id @default(cuid())
+  tournamentId String
+  playerId     String
+  teammateId   String?  // 仅双打：与之组队的另一名 playerId
+  seed         Int?
+  createdAt    DateTime @default(now())
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, playerId])
+  @@index([tournamentId])
+}
+
+// 对阵图节点。a1/a2 = A 队，b1/b2 = B 队（单打只用 a1/b1）。
+// winnerSide = "A" | "B"；胜者经 nextMatchId + nextSlot 进位到下一轮。
+model TournamentMatch {
+  id              String   @id @default(cuid())
+  tournamentId    String
+  round           Int
+  slotIndex       Int
+  a1Id            String?
+  a2Id            String?
+  b1Id            String?
+  b2Id            String?
+  leftScore       Int?
+  rightScore      Int?
+  winnerSide      String?
+  status          String   @default("PENDING") // PENDING | DONE
+  nextMatchId     String?
+  nextSlot        String?  // "A" | "B"：胜者填入下一场的哪个队槽
+  approvedMatchId String?  @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@index([tournamentId])
 }

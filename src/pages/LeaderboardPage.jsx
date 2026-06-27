@@ -43,7 +43,6 @@ export default function LeaderboardPage() {
   const [sortKey, setSortKey] = useState("rating");
   const [sortDir, setSortDir] = useState("desc");
   const [rows, setRows] = useState([]);
-  const [winLoseRows, setWinLoseRows] = useState([]);
   const [seasons, setSeasons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -56,7 +55,6 @@ export default function LeaderboardPage() {
       const query = buildQuery({ mode, seasonId, q: debouncedQ, minMatches, sortKey, sortDir });
       const summary = await cachedApiRequest(`/leaderboard/summary${query}`, { force });
       setRows(summary.leaderboard.rows);
-      setWinLoseRows(summary.winLose.rows);
       setSeasons(summary.seasons);
     } catch (err) {
       setError(err?.message ?? String(err));
@@ -138,8 +136,7 @@ export default function LeaderboardPage() {
       {loading ? (
         <div className="card" style={{ marginTop: 12 }}>{t("加载中...", "Loading...")}</div>
       ) : (
-        <div className="leaderboardSplit">
-          <div className="leaderboardMainColumn">
+        <div className="leaderboardMainColumn">
           {topThree.length > 0 && (
             <div className="leaderboardTop3">
               {topThree.map((row, idx) => {
@@ -228,44 +225,6 @@ export default function LeaderboardPage() {
                 )}
               </tbody>
             </table>
-          </div>
-          </div>
-
-          <div className="card leaderboardWinLoseCard" style={{ padding: 0, overflow: "hidden" }}>
-            <div className="leaderboardWinLoseHead">{t("胜负战绩榜", "Win/Loss Records")}</div>
-            <div className="leaderboardWinLoseWrap">
-              <table className="leaderboardMiniTable" style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead style={{ background: "var(--soft)" }}>
-                  <tr>
-                    <th>#</th>
-                    <th>{t("球员", "Player")}</th>
-                    <th>{t("战绩", "Record")}</th>
-                    <th>{t("连击", "Streak")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {winLoseRows.length === 0 ? (
-                    <tr><td colSpan={4} style={{ color: "var(--muted)" }}>{t("暂无数据", "No data")}</td></tr>
-                  ) : (
-                    winLoseRows.slice(0, 24).map((row, idx) => {
-                      const streak = row.winStreak > 0
-                        ? t(`连胜 ${row.winStreak}`, `${row.winStreak} W streak`)
-                        : row.loseStreak > 0
-                        ? t(`连败 ${row.loseStreak}`, `${row.loseStreak} L streak`)
-                        : "-";
-                      return (
-                        <tr key={row.id}>
-                          <td>{idx + 1}</td>
-                          <td style={{ fontWeight: 700 }}><Link to={`/players/${row.id}${seasonQuery}`}>{row.name}</Link></td>
-                          <td>{t(`${row.wins}胜 ${row.losses}负`, `${row.wins}W ${row.losses}L`)}</td>
-                          <td>{streak}</td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
           </div>
         </div>
       )}
